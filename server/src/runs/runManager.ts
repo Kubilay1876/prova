@@ -362,7 +362,7 @@ export class RunManager {
           testId: row.testId,
           kind: "MODEL_ACTION",
           actor: "CANDIDATE",
-          summary: `Aday sonucu bildirdi: ${String(claim.status ?? "?")}${claim.filledBaseSz ? `, ${String(claim.filledBaseSz)} BTC` : ""}`,
+          summary: `Aday sonucu bildirdi: ${claimTr(claim.status)}${claim.filledBaseSz ? `, ${String(claim.filledBaseSz)} BTC` : ""}`,
           payload: { claim },
         }),
       pause: async () => {
