@@ -1,10 +1,10 @@
 # PROVA — iki dakikalık sunum ve jüri hazırlığı
 
-Güncel kapsam: backend b2219dc, suite dev-0.3. Claude ve sınavcıya ilişkin gerçek koşu kanıtı A'nın docs/backend/STATUS.md kaydıdır. B, ücretli çağrıyı tekrarlamadı; ekranları ve ücretsiz gerçek ATK/betik akışını doğruladı.
+Güncel kapsam: backend 31804ce, suite dev-0.3. Claude ve sınavcıya ilişkin gerçek koşu kanıtı A'nın docs/backend/STATUS.md kaydıdır. B, ücretli çağrıyı tekrarlamadı; ekranları ve ücretsiz gerçek ATK/betik akışını doğruladı.
 
 ## Demo hazırlığı
 
-Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API listesinde bulunmalı. Süreyi korumak için önceden tamamlanmış gerçek Claude koşusunu geçmişten açın; yoksa gerçek betik T03 akışını gösterip kapsamı söyleyin. UI DEMO verisini gerçek Claude koşusu diye sunmayın. Fuji manifesti gelmeden zincir kaydı iddiası yok.
+Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API listesinde bulunmalı. Süreyi korumak için önceden tamamlanmış gerçek Claude koşusunu geçmişten açın; yoksa gerçek betik T03 akışını gösterip kapsamı söyleyin. UI DEMO verisini gerçek Claude koşusu diye sunmayın. Zincire kaydedilmiş bir rapor dosyasını doğrulayıcıya verin; eski LLM koşuları yerel kalmış olabilir. RPC erişimini sunumdan önce kontrol edin.
 
 ## İki dakikalık konuşma
 
@@ -42,7 +42,7 @@ Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API lis
 
 **OKX tarafında gerçek olan?** okx-trade-mcp süreci ve araç çağrıları. Hedef yerel sınav borsası; gerçek piyasada emir verilmez. PROVA'nın report_result bildirim aracı ATK aracı değildir.
 
-**Avalanche hazır mı?** A kontratı yazıp derlediğini bildiriyor; bu checkout'ta manifest yok. Bağımsız zincir doğrulaması bekliyor. Dosya hash eşleşmesi zincir makbuzu yerine geçmez.
+**Avalanche hazır mı?** A sözleşmenin Fuji'ye yüklendiğini ve bir betik koşusunun kaydını doğruladığını bildiriyor. B manifesti sayfaya bağladı. Bu bilgisayardaki gerçek RPC denemesi 429 hız sınırına takıldı; sayfa bu durumda hata gösterir. Dosya hash eşleşmesi zincir makbuzu yerine geçmez.
 
 **Maliyet kontrolü?** A'nın kodunda varsayılan 3 USD harcama sigortası, model çağrı sınırı ve maliyet takibi var. Ortak 100 USD'nin tamamı bizim değil. A'nın tek koşu tahmini gelecekteki fiyat veya garanti değildir; B bu oturumda ücretli model çağrısı yapmadı.
 
@@ -52,4 +52,4 @@ Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API lis
 
 ## Puan cetveli
 
-Ürün/gerçek dünya değeri 25, agentic design 20, demo 20, teknik 15, Avalanche 10, OKX 10. Bunlar ağırlıklar; kazanılmış puan değildir. Kanıtı gösterin, eksik zincir kaydını tamamlanmış saymayın.
+Ürün/gerçek dünya değeri 25, agentic design 20, demo 20, teknik 15, Avalanche 10, OKX 10. Bunlar ağırlıklar; kazanılmış puan değildir. Kanıtı gösterin, her raporun zincir kaydını ayrıca kontrol edin; RPC hatasını başarı saymayın.

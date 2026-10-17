@@ -1,4 +1,4 @@
-import { createPublicClient, http, decodeEventLog, type Hex } from 'viem';
+import { createPublicClient, http, decodeEventLog, type Hex, type Transport, type AbiEvent } from 'viem';
 import { avalancheFuji } from 'viem/chains';
 import { chainManifest } from './chain-manifest.ts';
 export type Verification = { state: 'VERIFIED' | 'UNCONFIGURED' | 'MISSING_SOURCE' | 'NOT_FOUND' | 'PENDING' | 'MISMATCH' | 'ERROR'; message: string; digest: string; txHash?: string };
@@ -25,34 +25,60 @@ export async function verifyFile(file: File): Promise<Verification> {
   const report = (root.run && typeof root.run === 'object' ? root.run : root) as Record<string, unknown>;
   const candidateVersionHash = report.candidateVersionHash ?? (root.candidate as Record<string, unknown> | undefined)?.versionHash;
   const sourceEvents = root.events ?? report.events ?? (root.evidence as Record<string, unknown> | undefined)?.events;
-  if (typeof candidateVersionHash !== 'string' || typeof report.suiteHash !== 'string' || typeof report.fixtureHash !== 'string' || typeof report.policyHash !== 'string' || !Array.isArray(report.tests) || !Array.isArray(sourceEvents)) {
+  if (!isHash(candidateVersionHash) || !isHash(report.suiteHash) || !isHash(report.fixtureHash) || !isHash(report.policyHash) || !Array.isArray(report.tests) || !Array.isArray(sourceEvents)) {
     return { state: 'MISSING_SOURCE', digest, message: 'Sürüm, paket, fixture, politika, test veya olay kaynağı eksik. Dosyanın kimlik ilişkisi doğrulanamadı.' };
   }
+  return verifyRegistration({ digest, candidateVersionHash, suiteHash: report.suiteHash });
+}
+const isHash = (value: unknown): value is string => typeof value === 'string' && /^(?:0x)?[0-9a-fA-F]{64}$/.test(value);
+const bytes32 = (value: string): Hex => `0x${value.replace(/^0x/, '').toLowerCase()}`;
+
+// Public digest/identity lookup only. Transport injection is for isolated tests, never report contents.
+export async function verifyRegistration(source: { digest: string; candidateVersionHash: string; suiteHash: string }, transport?: Transport): Promise<Verification> {
+  const { digest, candidateVersionHash, suiteHash } = source;
   const manifest = chainManifest;
-  if (!manifest) return { state: 'UNCONFIGURED', digest, message: 'Zincir doğrulaması bekliyor. A’nın izinli Fuji ağ/adres manifesti ve olay ABI’si henüz yok; kayıt yerel, zincirde doğrulanmadı.' };
+  if (!isHash(digest) || !isHash(candidateVersionHash) || !isHash(suiteHash)) return { state: 'MISSING_SOURCE', digest, message: 'Rapor, aday sürümü veya paket özeti geçerli bir SHA-256 değeri değil.' };
   if (manifest.chainId !== 43113 || !manifest.rpcUrl.startsWith('https://') || !manifest.abi.length) return { state: 'ERROR', digest, message: 'Sabit manifest geçersiz. Fuji ağ/adres/ABI yapılandırmasını kontrol edin.' };
   try {
-    const client = createPublicClient({ chain: avalancheFuji, transport: http(manifest.rpcUrl, { timeout: 12000, retryCount: 0 }) });
+    const client = createPublicClient({ chain: avalancheFuji, transport: transport ?? http(manifest.rpcUrl, { timeout: 12000, retryCount: 0 }) });
     if (await client.getChainId() !== manifest.chainId) return { state: 'MISMATCH', digest, message: 'RPC yanlış ağda. Beklenen ağ Avalanche Fuji (43113).' };
-    const head = await client.getBlockNumber();
-    // Bound each query; scanning errors are never reported as absence of a record.
+    const [head, recorder, recordedAt] = await Promise.all([
+      client.getBlockNumber(),
+      client.readContract({ address: manifest.contractAddress, abi: manifest.abi, functionName: 'recorder' }),
+      client.readContract({ address: manifest.contractAddress, abi: manifest.abi, functionName: 'recordedAt', args: [bytes32(digest)] }),
+    ]);
+    if (!same(recorder, manifest.recorderAddress)) return { state: 'MISMATCH', digest, message: 'Sözleşmenin kayıtçısı sabit manifestteki izinli kayıtçıyla eşleşmiyor.' };
+    if (typeof recordedAt !== 'bigint') throw new Error('Invalid recordedAt response');
+    if (recordedAt === 0n) return { state: 'NOT_FOUND', digest, message: 'Bu dosya hash’i için izinli Fuji kontratında kayıt bulunamadı. Dosya değişmiş veya kayıt henüz gönderilmemiş olabilir.' };
     const start = BigInt(manifest.deploymentBlock);
-    if (head - start > 100000n) return { state: 'ERROR', digest, message: 'Tarama aralığı 100.000 bloğu aşıyor. A’nın sabit manifest/indeksleme desteği gerekli.' };
-    for (let from = start; from <= head; from += 2048n) {
-      const logs = await client.getLogs({ address: manifest.contractAddress, fromBlock: from, toBlock: from + 2047n > head ? head : from + 2047n });
-      for (const log of logs) {
-        let decoded;
-        try { decoded = decodeEventLog({ abi: manifest.abi, eventName: manifest.eventName, topics: log.topics, data: log.data, strict: true }); } catch { continue; }
-        if (decoded.eventName !== manifest.eventName) continue;
-        if (!decoded.args || typeof decoded.args !== 'object' || Array.isArray(decoded.args)) continue;
-        const args = decoded.args as unknown as Record<string, unknown>;
-        if (!same(args.reportHash, digest)) continue;
-        const receipt = await client.getTransactionReceipt({ hash: log.transactionHash as Hex });
-        if (receipt.status !== 'success' || !same(receipt.to, manifest.contractAddress) || !same(args.recorder, manifest.recorderAddress) || !same(args.candidateVersionHash, candidateVersionHash) || !same(args.suiteHash, report.suiteHash)) return { state: 'MISMATCH', digest, message: 'Rapor olayı bulundu fakat makbuz, kayıtçı, sürüm veya paket eşleşmiyor.' };
-        if (receipt.blockNumber >= head) return { state: 'PENDING', digest, message: 'Kayıt bulundu; bir sonraki blok onayı bekleniyor.' };
-        return { state: 'VERIFIED', digest, txHash: receipt.transactionHash, message: 'Tam dosya baytları, başarılı Fuji makbuzu, izinli kayıtçı, aday sürümü ve paket olayı eşleşti. Bu sonuç aday davranışının güvenli olduğunu göstermez.' };
-      }
+    if (recordedAt < start) return { state: 'MISMATCH', digest, message: 'Kayıt bloğu sözleşmenin yükleme bloğundan önce görünüyor.' };
+    if (recordedAt > head) return { state: 'PENDING', digest, message: 'Yeni kayıt bildirildi; güncel blok ve olay onayı bekleniyor.' };
+    const event = manifest.abi.find(item => item.type === 'event' && item.name === manifest.eventName) as AbiEvent | undefined;
+    if (!event) throw new Error('Manifest event missing');
+    // recordedAt is an index, not sufficient proof. Verify the actual log and its receipt at that block.
+    const logs = await client.getLogs({ address: manifest.contractAddress, event, args: { reportHash: bytes32(digest) }, fromBlock: recordedAt, toBlock: recordedAt, strict: true });
+    for (const log of logs) {
+      if (log.removed || !same(log.address, manifest.contractAddress) || log.blockNumber !== recordedAt || !log.transactionHash) continue;
+      let decoded;
+      try { decoded = decodeEventLog({ abi: manifest.abi, eventName: manifest.eventName, topics: log.topics, data: log.data, strict: true }); } catch { continue; }
+      if (decoded.eventName !== manifest.eventName) continue;
+      if (!decoded.args || typeof decoded.args !== 'object' || Array.isArray(decoded.args)) continue;
+      const args = decoded.args as unknown as Record<string, unknown>;
+      if (!same(args.reportHash, digest)) continue;
+      const receipt = await client.getTransactionReceipt({ hash: log.transactionHash as Hex });
+      const inReceipt = receipt.logs.some(item => !item.removed && item.logIndex === log.logIndex && same(item.address, log.address) && same(item.data, log.data) && item.topics.length === log.topics.length && item.topics.every((topic, i) => same(topic, log.topics[i])));
+      if (receipt.status !== 'success' || !same(receipt.transactionHash, log.transactionHash) || !same(receipt.to, manifest.contractAddress) || receipt.blockNumber !== recordedAt || !same(receipt.blockHash, log.blockHash) || !inReceipt || !same(args.recorder, manifest.recorderAddress) || !same(args.candidateVersionHash, candidateVersionHash) || !same(args.suiteHash, suiteHash)) return { state: 'MISMATCH', digest, message: 'Rapor olayı bulundu fakat makbuz, kayıtçı, sürüm veya paket eşleşmiyor.' };
+      if (receipt.blockNumber >= head) return { state: 'PENDING', digest, message: 'Kayıt bulundu; bir sonraki blok onayı bekleniyor.' };
+      return { state: 'VERIFIED', digest, txHash: receipt.transactionHash, message: 'Tam dosya baytları, başarılı Fuji makbuzu, izinli kayıtçı, aday sürümü ve paket olayı eşleşti. Bu sonuç aday davranışının güvenli olduğunu göstermez.' };
     }
-    return { state: 'NOT_FOUND', digest, message: 'Bu dosya hash’i için izinli kontratta kayıt bulunamadı. Dosya değişmiş veya kayıt henüz gönderilmemiş olabilir.' };
-  } catch { return { state: 'ERROR', digest, message: 'Fuji RPC sorgusu tamamlanamadı. Zincir doğrulaması yapılamadı.' }; }
+    return { state: 'MISMATCH', digest, message: 'Kontratta kayıt bloğu var fakat eşleşen ReportRecorded olayı doğrulanamadı.' };
+  } catch (error) {
+    let cause: unknown = error;
+    for (let i = 0; i < 6 && cause && typeof cause === 'object'; i++) {
+      const current = cause as { status?: number; cause?: unknown };
+      if (current.status === 429) return { state: 'ERROR', digest, message: 'Fuji RPC sorgusu tamamlanamadı (429: hız sınırı). Daha sonra yeniden dene; zincir kaydı doğrulanmadı.' };
+      cause = current.cause;
+    }
+    return { state: 'ERROR', digest, message: 'Fuji RPC sorgusu tamamlanamadı. Zincir doğrulaması yapılamadı.' };
+  }
 }

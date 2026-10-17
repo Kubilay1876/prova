@@ -37,7 +37,7 @@ pnpm.cmd build
 - `src/domain.ts`: olay birleştirme, kanıt arama, karşılaştırma eşitliği.
 - `src/App.tsx`: aday, sınav, karne, geçmiş ve doğrulayıcı ekranları.
 - `src/verify.ts`: tam dosya SHA-256 ve sabit manifest için salt okuma zincir adaptörü.
-- `src/chain-manifest.ts`: A’dan gelecek, kodda incelenmiş public Fuji manifesti; şu an `null`.
+- `src/chain-manifest.ts`: A’nın 31804ce sürümünden incelenerek alınmış sabit public Fuji manifesti.
 - `src/styles.css`: masaüstü ve dar ekran görünümü.
 
 Model/borsa anahtarı, seed veya imza frontend’e girilmez. Kullanıcı dosyasının URL/RPC/kontrat alanları ağ hedefi olarak kullanılmaz. React kanıt metinlerini metin olarak gösterir; HTML çalıştırılmaz.
@@ -53,4 +53,10 @@ Güncel b2219dc backend ile standart `npm run dev` ve OneDrive içindeki normal 
 
 `tests/followups-smoke.mjs` 7 ek arayüz kontrolü içerir: Claude kapsamı, takip gerekçesi/kanıtı, kritik takipte genel FAIL, iptal, boş/eski kayıt ve mobil görünüm. Açık HTTP test yanıtları kullanır; gerçek model çağrısı yapmaz.
 
-Bağımsız /verify backend'e istek atmaz. Beklenen run.reportHash.value elle girilir veya seçili karneden aktarılır. Aynı tam dosya baytları ile karşılaştırma, zincir kaydından ayrı gösterilir. Fuji manifesti yokken zincir doğrulaması bekliyor kalır.
+Bağımsız /verify backend'e istek atmaz. Beklenen run.reportHash.value elle girilir veya seçili karneden aktarılır. Aynı tam dosya baytları ile karşılaştırma, zincir kaydından ayrı gösterilir. Fuji kontrolü sabit manifestteki RPC'ye salt okuma çağrıları yapar. Kayıt, olay ve başarılı makbuz eşleşirse doğrulandı; erişim hatası veya kayıt yokluğu ayrı gösterilir. Dosyanın kendisi gönderilmez.
+
+## Fuji kontrolleri
+
+`node tests/chain-browser-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"`: 4 tarayıcı senaryosu, sentetik RPC yanıtları.
+
+`node --experimental-strip-types tests/fuji-read-smoke.mjs`: A'nın daha önce kaydettiği public olay için gerçek RPC okuması; anahtar/imza/ödeme yok. Bu oturumda HTTP 429 hız sınırı nedeniyle tamamlanamadı. Eski LLM raporları zincire kaydedilmemiş olabilir; her dosya ayrıca kontrol edilir. Detay ../docs/frontend/FUJI-INTEGRATION.md.

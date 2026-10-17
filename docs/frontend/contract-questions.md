@@ -1,6 +1,6 @@
 # A'ya entegrasyon notları
 
-Backend referansı `b2219dc`, suite dev-0.3. B yalnız web/ ve docs/frontend/ değiştirir.
+Backend referansı `31804ce`, suite dev-0.3. B yalnız web/ ve docs/frontend/ değiştirir.
 
 ## Kapanan — B-01: OneDrive persist rename EPERM
 
@@ -10,9 +10,9 @@ A'nın atomicWriteSync düzeltmesi bu bilgisayarda standart `npm run dev` ve One
 
 A safeMessage maskelemesini ekledi. Kaynak okundu; bu B oturumunda kasıtlı altyapı arızasıyla tekrar test edilmedi. Önceki hata içeren kayıtların geriye dönük değişmediği biliniyor.
 
-## Açık — B-03: Fuji manifesti
+## Kapanan — B-03: Fuji manifesti
 
-Manifest henüz yok. chain-manifest.ts null. Gerekli public alanlar: chainId=43113, contractAddress, recorderAddress, deploymentBlock, izinli HTTPS rpcUrl, abiVersion, tam ABI ve eventName. Karne hükmü ve kayıt durumu ayrıdır.
+31804ce ile manifest geldi: chainId=43113, kontrat 0xda0a8d5e87f90da24dec7338aa4bcc6af43cea2b, yükleme bloğu 59596297. Tam public manifest web/src/chain-manifest.ts içine incelenerek kopyalandı. recordedAt(hash) yalnız kayıt bloğunu bulmak için kullanılır; asıl doğrulama olay ve başarılı makbuz eşleşmesidir. Karne hükmü ve kayıt durumu ayrıdır.
 
 ## Açık — B-04: Belgelerde eski kapsam
 
@@ -25,3 +25,7 @@ run.followUps opsiyonel olarak destekleniyor: testId, baseTestId, title, examine
 GET /api/candidates henüz kind/model alanlarını göndermiyor; label bunları içeriyor. B, health durumundan aday türü çıkarmıyor. supportedTestIds takip kimliklerini de içerdiği için zorunlu kapsam yalnız T01–T06 kesişimiyle gösterilir.
 
 Fuji kaydı sınav bitiminden sonra asenkron gelebilir. API sözleşmesine göre terminal koşuda otomatik polling durur. PENDING kayıt için kullanıcıya koşuyu yeniden açması söylenir; kayıt tamamlandı iddiası yapılmaz.
+
+## Açık — B-05: Public Fuji RPC erişimi
+
+Bu bilgisayardaki salt okuma denemesi ilk eth_chainId çağrısında HTTP 429 / Cloudflare 1015 verdi. Başka hedefe otomatik geçiş veya doğrulandı iddiası yok. Sayfa bu durumu hata olarak gösteriyor. A'nın gerçek kayıtlı rapor baytları bu bilgisayarda yok; pozitif dosya/olay/makbuz yolu izole sentetik RPC ile test edildi. Gerçek ağda tekrar çalıştırma için web/tests/fuji-read-smoke.mjs hazır.

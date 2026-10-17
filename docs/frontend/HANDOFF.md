@@ -56,7 +56,7 @@ A'nın raporu reportVersion/runId/candidate.versionHash/suiteHash/fixtureHash/po
 
 Karne ekranında Dosyayı bağımsız doğrula seçildiğinde referans hash doğrulayıcıya aktarılır. Bağımsız http://127.0.0.1:5173/verify açılışında backend gerekmez; referans elle girilir. Dosya seçilince tam baytlar cihazda SHA-256 ile hesaplanır. Beklenen hash boş/geçersiz/eşleşen/eşleşmeyen ayrı durumlar. Bu kontrol dosyayı sunucuya yüklemez.
 
-Fuji manifesti/ABI yok. Zincir doğrulaması bekliyor yazıyor; yerel eşleşme zincir sonucu diye sunulmuyor. Sabit public manifest gelirse B chain-manifest.ts dosyasını değerlendirir; kullanıcı raporundan rastgele URL/RPC/kontrat hedefi çağrılmaz.
+31804ce public Fuji manifesti incelenerek chain-manifest.ts içine alındı. /verify sabit kontratta recordedAt(hash) ile tek kayıt bloğunu bulur, gerçek ReportRecorded olayı ve başarılı makbuzu kontrol eder. Beklenen yerel hash isteğe bağlı; dosya baytları her zaman aynen hash'lenir. Kullanıcı raporundan RPC/ABI/kontrat hedefi çağrılmaz. Canlı RPC denemesi 429 hız sınırına takıldı; sonuç doğrulanmış sayılmadı. FUJI-INTEGRATION.md doğrulama sınırlarını ve test komutlarını içerir.
 
 ## Tekrar doğrulama
 
@@ -68,6 +68,7 @@ Playwright kuruluysa:
 node tests/real-api-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
 node tests/browser-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
 node tests/followups-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
+node tests/chain-browser-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
 ```
 
 Gerçek test iki sunucunun çalışmasını gerektirir ve 9 senaryo içerir. Fixture/HTTP deneme paketi 16, yeni takip testi HTTP deneme paketi 7 senaryo içerir. İkisi de gerçek model kanıtı değildir; ayrı geçici browser profili kullanır. Microsoft Edge kullanılır; kullanıcı tarayıcı profiline erişilmez. Ekran görüntüleri/JSON sonuçları artifacts/ altında Git dışında tutulur.
