@@ -36,6 +36,8 @@ Son güncelleme: 17 Ekim 2026, ~16.00. Suite `dev-0.3`. Bu belge **güncel durum
 - `npm run chain:e2e` geçti: yoklayıcı `RUNNING/LOCAL_ONLY → RUNNING/PENDING → PARTIAL/FUJI_VERIFIED` gördü; sunulan rapor baytlarının sha256'sı = `run.reportHash`; `recordedAt(hash)` blok numarası döndü; dosyaya tek satır sonu eklenince 0 döndü.
 - `observedConfirmationMs` (~5 sn) RPC sorgulama aralığını içerir; kesinleşme ölçümü değildir.
 - 15.30'dan önceki gerçek LLM koşuları zincirde değil (sözleşme yoktu). Sonrakiler otomatik kaydedilir.
+- **Demo karnesi:** `run_mvcbyp92afd8` (~16.05), gerçek Claude 6/6 + F01/F05 PASS, `FUJI_VERIFIED`, tx `0xc369e28f…613c`, blok 59596761.
+- **A × B çapraz doğrulama (~16.20, A'nın bilgisayarı):** B'nin `web/tests/fuji-read-smoke.mjs` canlı Fuji testi geçti. B'nin `web/src/verify.ts` doğrulayıcısı, **gerçek** demo karnesi baytlarıyla çalıştırıldı → `VERIFIED`; aynı dosyada tek kelime ("PASS"→"FAIL") değiştirilince → `NOT_FOUND`. (Geçici betikle; web/ altına dosya eklenmedi.)
 
 **Diğer**
 - OKX.AI hizmet tanımı: `docs/backend/SERVICE.md`.
