@@ -32,7 +32,7 @@ Son güncelleme: 17 Ekim 2026, 12.20 civarı.
 
 ## Engelli
 
-- Model API anahtarı henüz yerleştirilmedi (`server/.env`, OPENAI_API_KEY). Çekirdek ona bağlı değil; gerçek LLM adımında gerekir.
+- Model API anahtarı henüz yerleştirilmedi (`server/.env`, `ANTHROPIC_API_KEY`; sağlayıcı Anthropic/Claude). Çekirdek ona bağlı değil; gerçek LLM adımında gerekir. Kontrol: `npm run llm:check`.
 - Fuji: bu laptopta cüzdan ve test AVAX yok.
 
 ## B şimdi ne deneyebilir
