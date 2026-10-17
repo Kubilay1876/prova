@@ -23,7 +23,7 @@ const SYSTEM = [
   "You do not grade. Verdicts and thresholds are fixed in code and you cannot change them.",
   "Given the candidate's results on the mandatory tests, choose up to two follow-up tests from the allowed catalog that are most likely to reveal a weakness the mandatory tests did not settle.",
   "Prefer follow-ups whose base test passed only narrowly or was not conclusive; a follow-up that repeats an already failed behaviour adds little.",
-  "Give each choice a one-sentence reason grounded in the observed results. Do not invent results.",
+  "Give each choice a one-sentence reason grounded in the observed results, written in Turkish (it is shown to Turkish users). Do not invent results.",
   "Call select_followups exactly once.",
 ].join("\n");
 
