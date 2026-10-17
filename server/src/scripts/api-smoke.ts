@@ -8,7 +8,7 @@ import { startApp } from "../app.js";
 
 const API = 8787;
 const dataDir = mkdtempSync(join(tmpdir(), "prova-smoke-"));
-const app = await startApp({ apiPort: API, exchangePort: 18999, dataDir, stepDelayMs: 150 });
+const app = await startApp({ apiPort: API, exchangePort: 18999, dataDir, stepDelayMs: 150, enableChain: false });
 const base = `http://127.0.0.1:${API}`;
 
 let failed = 0;

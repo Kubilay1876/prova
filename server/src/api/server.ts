@@ -69,7 +69,8 @@ export function createApiServer(deps: { runs: RunManager; candidates: Candidate[
     }
     if (method === "GET" && path === "/api/candidates") {
       return json(res, 200, {
-        candidates: candidates.map((c) => ({ id: c.id, label: c.label, versionHash: c.versionHash(), provenance: c.provenance, supportedTestIds: c.supportedTestIds })),
+        // kind/model: optional v1 extension (B asked; label already says it in words).
+        candidates: candidates.map((c) => ({ id: c.id, label: c.label, versionHash: c.versionHash(), provenance: c.provenance, supportedTestIds: c.supportedTestIds, kind: c.kind, model: c.model ?? null })),
       });
     }
     if (method === "GET" && path === "/api/tests") {

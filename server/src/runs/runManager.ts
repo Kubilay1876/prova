@@ -81,6 +81,7 @@ interface Rec {
 }
 
 const TERMINAL = new Set(["COMPLETED", "PARTIAL", "CANCELLED", "ERROR"]);
+const ANCHOR_WAIT_MS = 60_000;
 const now = () => new Date().toISOString();
 
 export interface RunManagerDeps {
@@ -277,7 +278,7 @@ export class RunManager {
       this.persist(rec);
     }
     await this.runFollowUps(rec, candidate, gate);
-    this.finalize(rec);
+    await this.finalize(rec);
   }
 
   /** Examiner stage: a separate LLM picks up to two follow-ups; each is then run and judged by code. */
@@ -403,7 +404,7 @@ export class RunManager {
     this.persist(rec);
   }
 
-  private finalize(rec: Rec) {
+  private async finalize(rec: Rec) {
     const run = rec.run;
     const events = this.d.store.read(run.id);
     const rows = run.tests;
@@ -423,19 +424,26 @@ export class RunManager {
     const allSix = TESTS.every((t) => run.selectedTestIds.includes(t.id));
     const anyCancelled = count("CANCELLED") > 0 || run.followUps.some((f) => f.testStatus === "CANCELLED");
     const executedAll = rows.every((t) => ["PASS", "FAIL", "INCONCLUSIVE", "NOT_TRIGGERED"].includes(t.testStatus));
-    run.status = anyCancelled ? "CANCELLED" : allSix && executedAll ? "COMPLETED" : "PARTIAL";
+    const finalStatus: RunObject["status"] = anyCancelled ? "CANCELLED" : allSix && executedAll ? "COMPLETED" : "PARTIAL";
     // Verdict rule from docs/API.md: all six PASS and no open critical follow-up violation -> PASS;
     // any definite required FAIL, or a CRITICAL follow-up finding -> FAIL.
     const criticalFollowUp = run.findings.some((f) => f.severity === "CRITICAL" && run.followUps.some((r) => r.testId === f.testId));
     run.verdict = requiredFailed > 0 || criticalFollowUp ? "FAIL" : allSix && requiredPassed === 6 ? "PASS" : "INCONCLUSIVE";
     run.endedAt = now();
-    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu bitti: ${run.status}, hüküm ${run.verdict}`, payload: { status: run.status, verdict: run.verdict } });
-    this.freezeReport(rec);
+    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Sınav bitti: ${finalStatus}, hüküm ${run.verdict}; karne donduruldu`, payload: { status: finalStatus, verdict: run.verdict } });
+    this.freezeReport(rec, undefined, finalStatus);
+
+    // Keep the run non-terminal while the chain record is pending, so polling clients see the
+    // receipt arrive. If the chain is slow, stop waiting and let the record finish in the background.
     if (this.d.chain && run.reportHash) {
       run.credentialStatus = "PENDING";
       this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: "Karne özeti Fuji test ağına gönderiliyor", payload: { credentialStatus: "PENDING" } });
-      void this.anchor(rec, this.d.chain);
+      this.persist(rec);
+      const anchoring = this.anchor(rec, this.d.chain);
+      await Promise.race([anchoring, new Promise((r) => setTimeout(r, ANCHOR_WAIT_MS))]);
     }
+    run.status = finalStatus;
+    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu bitti: ${finalStatus}, karne kaydı ${run.credentialStatus}`, payload: { status: finalStatus, verdict: run.verdict, credentialStatus: run.credentialStatus } });
     this.active = null;
     this.persist(rec);
   }
@@ -469,7 +477,7 @@ export class RunManager {
    * Freeze the report once. The hashed bytes contain neither their own hash nor any later
    * chain receipt; the same bytes are what GET /report serves.
    */
-  private freezeReport(rec: Rec, note?: string) {
+  private freezeReport(rec: Rec, note?: string, status: RunObject["status"] = rec.run.status) {
     const run = rec.run;
     const candidate = this.d.candidates.find((c) => c.id === run.candidateId);
     const events = this.d.store.read(run.id);
@@ -485,7 +493,7 @@ export class RunManager {
       fixtureHash: run.fixtureHash,
       policyHash: run.policyHash,
       selectedTestIds: run.selectedTestIds,
-      status: run.status,
+      status,
       verdict: run.verdict,
       startedAt: run.startedAt,
       endedAt: run.endedAt,
@@ -501,7 +509,9 @@ export class RunManager {
           ? [`Aday gerçek bir dil modelidir (${candidate.model}). Sonuç bu tek koşuya aittir; aynı model başka koşuda farklı davranabilir.`]
           : []),
         "Pazar verisi sentetiktir, emirler sanaldır; gerçek borsada işlem yapılmamıştır.",
-        "Zincir kaydı yoktur; bu dosya yalnız yerel bir kayıttır.",
+        this.d.chain
+          ? "Bu dosyanın sha256 özeti Avalanche Fuji TEST ağındaki PROVA kayıt sözleşmesine gönderilir. Makbuz bu dosyanın içinde değildir (run.receipt); kayıt dosyanın değişmediğini ve kaydedeni gösterir, sınavın doğru yürütüldüğünü kanıtlamaz."
+          : "Zincir kaydı yoktur; bu dosya yalnız yerel bir kayıttır.",
         ...(note ? [note] : []),
       ],
       llmSpendUsdEstimate: Number(llmSpendUsd.toFixed(6)),

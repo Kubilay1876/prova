@@ -22,6 +22,8 @@ export interface AppOptions {
   exchangePort: number;
   dataDir: string;
   stepDelayMs: number;
+  /** false = never write to Fuji (acceptance checks must not spend test AVAX). Default true. */
+  enableChain?: boolean;
 }
 
 export async function startApp(opts: AppOptions) {
@@ -82,7 +84,8 @@ export async function startApp(opts: AppOptions) {
 
   // Fuji is used only when a deployment manifest exists AND a real chain read confirms it.
   let chain: FujiRecorder | null = null;
-  const candidateChain = FujiRecorder.load();
+  const candidateChain = opts.enableChain === false ? null : FujiRecorder.load();
+  if (opts.enableChain === false) caps.chain = { status: "NOT_CONFIGURED", checkedAt: null, message: "Zincir kaydı bu çalıştırmada kapalı" };
   if (candidateChain) {
     try {
       if (await candidateChain.check()) {

@@ -80,13 +80,17 @@ Bağımsız web doğrulayıcı bir rapor dosyasından hash hesaplayıp sabit kon
 
 ## Uygulama notları (v1 ile uyumlu, A tarafından eklendi)
 
+Güncel: suite `dev-0.3`, 17 Ekim ~16.00.
+
 - `POST /api/runs`: yeni koşu için HTTP 202, aynı requestId+içeriğin tekrarında mevcut koşu için HTTP 200. Koşu hemen başladığı için yanıttaki `status` `QUEUED` veya `RUNNING` olabilir.
 - `GET /api/runs`: özet yerine tam `run` nesnelerini döndürür (en yeni başta).
-- `verdict` koşu bitene kadar `null`. `credentialStatus` şimdilik hep `LOCAL_ONLY`, `receipt` hep `null`.
-- Bu sürümde yalnız **T03** çalışır. Diğer testler `GET /api/tests` içinde `supported:false` ve koşuda `UNSUPPORTED` döner; altılı seçim bile gönderilse `status` `PARTIAL`, `verdict` en iyi ihtimalle `INCONCLUSIVE` olur.
-- Adaylar şimdilik **kodla yazılmış betiklerdir (LLM değil)**; `label` bunu açıkça yazar. `versionHash` betik kaynağının sha256'sıdır.
-- `counts.modelCalls` bu betik adaylarda gerçekten 0'dır.
-- Rapor (`/report`) baytları koşu bitince bir kez dondurulur; `reportHash.value` aynı baytların sha256'sıdır. Rapor `limitations` dizisiyle kapsam sınırlarını yazar.
+- `verdict` sınav değerlendirmesi bitene kadar `null`.
+- **Altı testin hepsi uygulanır** (`GET /api/tests` içinde hepsi `supported:true`).
+- **Adaylar:** `claude-standard` gerçek LLM'dir (`claude-sonnet-5-5`) ve yalnız sunucuda model anahtarı varsa listelenir; altı testi ve takip testlerini destekler. `scripted-*` adaylar kodla yazılmış betiklerdir, yalnız T03'ü destekler; diğer testlerde `UNSUPPORTED` döner, bu yüzden altılı seçimde `PARTIAL` / en iyi `INCONCLUSIVE` olur. `GET /api/candidates` ek alanları: `kind` (`LLM` / `SCRIPTED_STAND_IN`), `model` (veya `null`). `supportedTestIds` takip kimliklerini (F..) de içerebilir; zorunlu kapsam T01–T06 kesişimidir.
+- **Takip testleri (`run.followUps`, ek alan):** LLM adayda altı testten sonra sınavcı en fazla 2 takip testi seçer. Her satır: `testId`, `baseTestId`, `title`, `examinerReason`, `testStatus`, `reason`, `evidenceEventIds`. Seçim `testId=null` olan `EXAMINER_DECISION` olayında. Takipteki CRITICAL bulgu genel hükmü FAIL yapar. `counts` yalnız zorunlu altıyı sayar; `counts.modelCalls` aday + sınavcı çağrılarının toplamıdır.
+- **Zincir kaydı:** Sunucuda Fuji manifesti ve kayıtçı anahtarı varsa, rapor dondurulduktan sonra sha256 özeti Fuji'ye yazılır. Bu sırada koşu **`RUNNING` kalır** ve `credentialStatus=PENDING` görünür; makbuz gelince (veya en fazla 60 sn bekledikten sonra) terminal duruma geçer. Yani terminal durumdaki koşuda `credentialStatus` çoğunlukla kesindir (`FUJI_VERIFIED` / `ERROR`); 60 sn aşılırsa `PENDING` kalabilir ve kayıt arka planda tamamlanır. `receipt` alanları: `chainId`, `contractAddress`, `txHash`, `recorderAddress`, `verificationStatus`, `blockNumber`, `submittedAt`, `confirmedAt`, `observedConfirmationMs` (RPC sorgulama aralığını da içerir; kesinleşme ölçümü değildir). Kayıt başarılıysa `reality.network` `FUJI` olur. Manifest: `docs/backend/fuji-manifest.json`.
+- Zincir kaydı sürerken `/report` 409 `REPORT_NOT_READY` döner (dosya donmuştur, koşu terminal olunca sunulur).
+- Rapor (`/report`) baytları bir kez dondurulur; `reportHash.value` aynı baytların sha256'sıdır; dosya kendi hash'ini ve zincir makbuzunu içermez. Rapor ek alanları: `candidate.kind`, `candidate.model`, `followUps`, `llmSpendUsdEstimate`, `limitations`.
 - Hata kodları: `INVALID_JSON`, `INVALID_REQUEST_ID`, `INVALID_BODY`, `INVALID_TEST_IDS`, `INVALID_AFTER` (400), `CANDIDATE_NOT_FOUND`, `RUN_NOT_FOUND`, `NOT_FOUND` (404), `REQUEST_ID_CONFLICT`, `RUN_IN_PROGRESS`, `REPORT_NOT_READY` (409), `BODY_TOO_LARGE` (413), `DEPENDENCY_NOT_READY` (503).
 - Sunucu yeniden başlarsa yarıda kalan koşu `ERROR` / `INCONCLUSIVE` kapatılır; sonuç başarıya veya kesin ret'e çevrilmez.
 

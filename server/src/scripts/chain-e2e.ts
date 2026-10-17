@@ -21,11 +21,16 @@ try {
   });
   const { runId } = await start.json();
   let run: any;
+  // Poll like the web UI does: stop at the first terminal status, then expect the receipt to be there.
+  const seen: string[] = [];
   for (let i = 0; i < 240; i++) {
     run = (await get(`/api/runs/${runId}`)).run;
-    if (["FUJI_VERIFIED", "ERROR"].includes(run.credentialStatus)) break;
+    const s = `${run.status}/${run.credentialStatus}`;
+    if (seen.at(-1) !== s) seen.push(s);
+    if (["COMPLETED", "PARTIAL", "CANCELLED", "ERROR"].includes(run.status)) break;
     await new Promise((r) => setTimeout(r, 500));
   }
+  console.log(`status/credential transitions seen by a poller: ${seen.join(" -> ")}`);
   console.log(`run ${runId}: status=${run.status} verdict=${run.verdict} credentialStatus=${run.credentialStatus}`);
   console.log("receipt:", JSON.stringify(run.receipt, null, 2));
 
