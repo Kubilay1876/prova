@@ -15,7 +15,9 @@
     "eval:test": "tsx src/scripts/eval-test.ts",
     "llm:run": "tsx src/scripts/llm-run.ts",
     "chain:compile": "tsx src/chain/compile.ts",
-    "chain:deploy": "tsx src/chain/deploy.ts"
+    "chain:deploy": "tsx src/chain/deploy.ts",
+    "chain:balance": "tsx src/chain/balance.ts",
+    "chain:e2e": "tsx src/scripts/chain-e2e.ts"
   },
   "keywords": [],
   "author": "",
