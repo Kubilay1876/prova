@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { compareDigest, hashFile, verifyFile, verifyRegistration } from '../src/verify.ts';
+import { compareDigest, hashFile, verifyFile, verifyRegistration, retryRateLimit } from '../src/verify.ts';
 import { chainManifest } from '../src/chain-manifest.ts';
 import { custom } from 'viem';
 import { rpcStub } from './chain-rpc-stub.mjs';
@@ -63,4 +63,38 @@ test('Fuji registration requires matching event identity and a successful consis
 test('malformed report identity and UI DEMO are rejected before any RPC call', async () => {
   assert.equal((await verifyFile(new File(['{"notice":"UI DEMO — sentetik arayüz verisi"}'], 'demo.json'))).state, 'MISSING_SOURCE');
   assert.equal((await verifyFile(new File(['{}'], 'empty.json'))).state, 'MISSING_SOURCE');
+});
+
+test('429 retries only the failed read once after 1500ms and never restarts successful RPC reads', async () => {
+  const source = { digest: `0x${'1'.repeat(64)}`, candidateVersionHash: `0x${'2'.repeat(64)}`, suiteHash: `0x${'3'.repeat(64)}` };
+  const stub = rpcStub(chainManifest, source);
+  let logs = 0;
+  const delays: number[] = [];
+  const base = custom({ request: async args => {
+    if (args.method === 'eth_getLogs' && ++logs === 1) throw Object.assign(new Error('rate limited'), { status: 429 });
+    return stub.request(args);
+  } }, { retryCount: 0 });
+  // Inject a wait recorder while exercising the production verification path.
+  const result = await verifyRegistration(source, retryRateLimit(base, async ms => { delays.push(ms); }));
+  assert.equal(result.state, 'VERIFIED');
+  assert.equal(logs, 2);
+  assert.deepEqual(delays, [1500]);
+  assert.equal(stub.state.calls.filter(call => call.method === 'eth_chainId').length, 1);
+});
+
+test('rate-limit transport has one shared retry budget; persistent 429, parallel 429 and 503 stop', async () => {
+  for (const status of [429, 503]) {
+    let calls = 0; const delays: number[] = [];
+    const base = custom({ request: async () => { calls++; throw Object.assign(new Error('unavailable'), { status }); } }, { retryCount: 0 });
+    const transport = retryRateLimit(base, async ms => { delays.push(ms); })({});
+    await assert.rejects(transport.request({ method: 'eth_chainId' }));
+    assert.equal(calls, status === 429 ? 2 : 1);
+    assert.deepEqual(delays, status === 429 ? [1500] : []);
+  }
+  let calls = 0; const delays: number[] = [];
+  const base = custom({ request: async () => { calls++; throw Object.assign(new Error('limited'), { cause: { status: 429 } }); } }, { retryCount: 0 });
+  const transport = retryRateLimit(base, async ms => { delays.push(ms); })({});
+  const results = await Promise.allSettled([transport.request({ method: 'eth_chainId' }), transport.request({ method: 'eth_blockNumber' })]);
+  assert.ok(results.every(result => result.status === 'rejected'));
+  assert.equal(calls, 3); assert.deepEqual(delays, [1500]);
 });

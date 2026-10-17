@@ -80,3 +80,9 @@ Tamamlanmış gerçek Claude koşusunu aç → altı zorunlu sonucu göster → 
 Model bütçesi: ortak 100 USD'nin tamamı bu takımın değil. Yaklaşık 33,33 USD veya daha az; çalışma hedefi 20 USD (12 geliştirme,5 demo,3 tekrar). A gerçek kalan payı teyit etmeli. Şimdiki entegrasyon model çağrısı yapmıyor.
 
 A backend bütçe sigortası varsayılan 3 USD; önceki 20 USD planlama hedefi bu limiti yükseltme talimatı değildir.
+
+## Son demo düzeltmesi
+
+A'nın a0ed0ff belgeleri ve ilettiği sonuçlar: public Fuji testi PASS; kayıtlı gerçek Claude demo karnesi `run_mvcbyp92afd8` verify.ts ile VERIFIED, PASS→FAIL değişikliği NOT_FOUND. Demo A bilgisayarında, 17.00 sonrası yalnız düzeltme.
+
+Tek blok recordedAt optimizasyonu 11d7a41'de zaten vardı. Yeni düzeltme yalnız 429 alan okumayı 1,5 saniye sonra bir kez tekrarlar; doğrulama başına en fazla bir ek RPC isteği, başarılı okumaları yeniden başlatmaz. PRODUCT.md teknik demo notlarıyla eşlendi. B ekranı altı testi birlikte gönderir; betik adaydaki beş UNSUPPORTED açıklanmalı.

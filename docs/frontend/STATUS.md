@@ -1,6 +1,6 @@
 # B frontend durumu — 17 Ekim 2026
 
-Dal: `b-web`. Backend referansı: `31804ce` (suite dev-0.3). Ana dal, önceki B teslimini içerdiğinden b-web çatışmasız ileri alındı. B'nin yeni kaynak değişiklikleri yalnız web/ ve docs/frontend/ altında.
+Dal: `b-web`. Backend referansı: `a0ed0ff` (suite dev-0.3). Ana dal, önceki B teslimini içerdiğinden b-web çatışmasız ileri alındı. B'nin yeni kaynak değişiklikleri yalnız web/ ve docs/frontend/ altında.
 
 ## Yeni eklenen ekran desteği
 
@@ -14,7 +14,7 @@ Dal: `b-web`. Backend referansı: `31804ce` (suite dev-0.3). Ana dal, önceki B 
 
 ## Bu bilgisayarda doğrulananlar
 
-- TypeScript, üretim derlemesi ve 8 birim testi başarılı.
+- TypeScript, üretim derlemesi ve 10 birim testi başarılı.
 - 16 mevcut fixture/HTTP deneme tarayıcı kontrolü başarılı.
 - 7 yeni takip testi/Claude kapsamı tarayıcı kontrolü başarılı. Bunlar açık HTTP test yanıtlarıdır; gerçek model veya sınavcı çalıştırıldığı anlamına gelmez.
 - 9 gerçek API + ATK MCP tarayıcı kontrolü başarılı. Bu kez standart `server/npm run dev`, OneDrive içindeki normal `data/` yolu kullanıldı. Önceki EPERM hatası tekrarlanmadı; geçici dataDir başlatıcısı gerekmedi.
@@ -37,4 +37,10 @@ UI demo açık etiketli, T03 örneği olarak kaldı; gerçek API hatasında otom
 
 ## Fuji ekran güncellemesi
 
-8 birim testi ve 4 yeni tarayıcı kontrolü başarılı: tam dosya eşleşmesi, tek satır sonu farkı, yanlış kimlik, makbuz tutarlılığı, bekleme, HTTP 429 ve mobil görünüm. Ağ yanıtları bu testlerde açıkça sentetiktir. Kaynakta kullanıcı dosyasından hedef/ABI alınmaz; yalnız public hash ve sabit kontrat okuma sorguları gönderilir. Gerçek zincir çağrıları imza/model anahtarı gerektirmez. A daha önceki LLM koşularının zincire kaydedilmediğini bildiriyor.
+10 birim testi ve 5 Fuji tarayıcı kontrolü başarılı: tam dosya eşleşmesi, tek satır sonu farkı, yanlış kimlik, makbuz tutarlılığı, bekleme, HTTP 429 ve mobil görünüm. Ağ yanıtları bu testlerde açıkça sentetiktir. Kaynakta kullanıcı dosyasından hedef/ABI alınmaz; yalnız public hash ve sabit kontrat okuma sorguları gönderilir. Gerçek zincir çağrıları imza/model anahtarı gerektirmez. A daha önceki LLM koşularının zincire kaydedilmediğini bildiriyor.
+
+## A'nın gerçek dosya doğrulaması ve 429 düzeltmesi
+
+A, a0ed0ff ile gerçek public okuma testinin ve `run_mvcbyp92afd8` zincir kayıtlı Claude demo karnesinin B verify.ts koduyla geçtiğini bildirdi; dosyada PASS→FAIL değişimi NOT_FOUND. Demo A bilgisayarında. B önceki 429 deneyimini gerçek başarı olarak yeniden etiketlemedi.
+
+Tek blok sorgulama 11d7a41'de zaten vardı. Eklenen tek davranış, 429 alan RPC isteğini 1,5 saniye sonra bir kez denemek; tüm doğrulama için en fazla bir ek istek. 10 birim testinde geçici/kalıcı/paralel 429 ve 503 sınırları kontrol edildi. PRODUCT.md, DEMO-A.md ile eşlendi; B'nin betik akışında altı test gönderdiği ve beş UNSUPPORTED gösterdiği not edildi. 17.00 sonrası yeni özellik açılmıyor.

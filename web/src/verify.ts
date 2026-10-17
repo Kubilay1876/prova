@@ -32,6 +32,36 @@ export async function verifyFile(file: File): Promise<Verification> {
 }
 const isHash = (value: unknown): value is string => typeof value === 'string' && /^(?:0x)?[0-9a-fA-F]{64}$/.test(value);
 const bytes32 = (value: string): Hex => `0x${value.replace(/^0x/, '').toLowerCase()}`;
+function isRateLimited(error: unknown) {
+  let cause = error;
+  for (let i = 0; i < 6 && cause && typeof cause === 'object'; i++) {
+    const current = cause as { status?: number; cause?: unknown };
+    if (current.status === 429) return true;
+    cause = current.cause;
+  }
+  return false;
+}
+
+// At most one extra RPC request per verification, including concurrent reads.
+// Retrying the failed read preserves successful calls and never repeats the whole verification.
+export function retryRateLimit(base: Transport, wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))): Transport {
+  return options => {
+    const transport = base({ ...options, retryCount: 0 });
+    let retried = false;
+    return {
+      ...transport,
+      request: async (args, requestOptions) => {
+        try { return await transport.request(args, requestOptions); }
+        catch (error) {
+          if (retried || !isRateLimited(error)) throw error;
+          retried = true;
+          await wait(1500);
+          return transport.request(args, requestOptions);
+        }
+      },
+    };
+  };
+}
 
 // Public digest/identity lookup only. Transport injection is for isolated tests, never report contents.
 export async function verifyRegistration(source: { digest: string; candidateVersionHash: string; suiteHash: string }, transport?: Transport): Promise<Verification> {
@@ -40,7 +70,7 @@ export async function verifyRegistration(source: { digest: string; candidateVers
   if (!isHash(digest) || !isHash(candidateVersionHash) || !isHash(suiteHash)) return { state: 'MISSING_SOURCE', digest, message: 'Rapor, aday sürümü veya paket özeti geçerli bir SHA-256 değeri değil.' };
   if (manifest.chainId !== 43113 || !manifest.rpcUrl.startsWith('https://') || !manifest.abi.length) return { state: 'ERROR', digest, message: 'Sabit manifest geçersiz. Fuji ağ/adres/ABI yapılandırmasını kontrol edin.' };
   try {
-    const client = createPublicClient({ chain: avalancheFuji, transport: transport ?? http(manifest.rpcUrl, { timeout: 12000, retryCount: 0 }) });
+    const client = createPublicClient({ chain: avalancheFuji, transport: retryRateLimit(transport ?? http(manifest.rpcUrl, { timeout: 12000, retryCount: 0 })) });
     if (await client.getChainId() !== manifest.chainId) return { state: 'MISMATCH', digest, message: 'RPC yanlış ağda. Beklenen ağ Avalanche Fuji (43113).' };
     const [head, recorder, recordedAt] = await Promise.all([
       client.getBlockNumber(),
@@ -73,12 +103,7 @@ export async function verifyRegistration(source: { digest: string; candidateVers
     }
     return { state: 'MISMATCH', digest, message: 'Kontratta kayıt bloğu var fakat eşleşen ReportRecorded olayı doğrulanamadı.' };
   } catch (error) {
-    let cause: unknown = error;
-    for (let i = 0; i < 6 && cause && typeof cause === 'object'; i++) {
-      const current = cause as { status?: number; cause?: unknown };
-      if (current.status === 429) return { state: 'ERROR', digest, message: 'Fuji RPC sorgusu tamamlanamadı (429: hız sınırı). Daha sonra yeniden dene; zincir kaydı doğrulanmadı.' };
-      cause = current.cause;
-    }
+    if (isRateLimited(error)) return { state: 'ERROR', digest, message: 'Fuji RPC sorgusu tamamlanamadı (429: hız sınırı). Daha sonra yeniden dene; zincir kaydı doğrulanmadı.' };
     return { state: 'ERROR', digest, message: 'Fuji RPC sorgusu tamamlanamadı. Zincir doğrulaması yapılamadı.' };
   }
 }
