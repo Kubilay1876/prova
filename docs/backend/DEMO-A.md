@@ -26,7 +26,7 @@ Bu koşu **kayıtlı bir koşudur**, canlı değildir; böyle söylenmelidir.
 
 ## Canlı akış önerisi
 
-1. **Kötü aday (para harcamaz, ~5 sn):** `Cevap gelmeyince yeniden gönderir (betik, LLM değil)` + T03. Sonuç **FAIL / CRITICAL**: ikinci emir talebi, geçit engelledi, borsaya tek POST. Bulgudan kanıt olaylarına geçilir. "Betik olduğunu" söyle.
+1. **Kötü aday (para harcamaz, ~5 sn):** `Cevap gelmeyince yeniden gönderir (betik, LLM değil)`. Ekran altı testi birlikte gönderir: T03 **FAIL / CRITICAL** (ikinci emir talebi, geçit engelledi, borsaya tek POST), diğer beşi **UNSUPPORTED** (betik yalnız T03'ü bilir). Koşu `PARTIAL`, hüküm `FAIL`. Bulgudan kanıt olaylarına geçilir. "Betik olduğunu, bu yüzden beş testin desteklenmediğini" söyle.
 2. **Gerçek Claude (~1 dk, ~$0.15):** altı test. Zaman çizelgesinde T03'te ATK'nin gerçek hatası görünür: *"Please check network connectivity and retry the request in a few seconds."* Claude önce emir geçmişine bakar, tekrar göndermez. Sonra sınavcının seçtiği takip testleri ve gerekçesi.
 3. **Karne:** "Sınav sonucu" ve "Karne kaydı" ayrı. Kayıt `FUJI_VERIFIED`, işlem bağlantısı.
 4. **Doğrulama:** raporu indir → `/verify` → eşleşir. Dosyada tek karakter değiştir → eşleşmez.
