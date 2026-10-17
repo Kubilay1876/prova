@@ -1,0 +1,104 @@
+{
+  "chainId": 43113,
+  "contractAddress": "0xda0a8d5e87f90da24dec7338aa4bcc6af43cea2b",
+  "recorderAddress": "0xEE4D3dCbc6E6962e80Ff3C8Ca97A92C8E1BF368E",
+  "deploymentBlock": "59596297",
+  "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
+  "abiVersion": "1",
+  "eventName": "ReportRecorded",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "reportHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "candidateVersionHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "suiteHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recorder",
+          "type": "address"
+        }
+      ],
+      "name": "ReportRecorded",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "reportHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "candidateVersionHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "suiteHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "record",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "recordedAt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "recorder",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "deployTxHash": "0x2f376c49e5f776b3c92766379f76dc55f30b740b088ad78f6d4792f572d17f6d",
+  "note": "Avalanche Fuji TEST network. Custom PROVA registry, not an ERC-8004 Validation Registry."
+}
