@@ -9,7 +9,8 @@
     "smoke:atk": "tsx src/smoke/mcp-redirect.ts",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
-    "api:smoke": "tsx src/scripts/api-smoke.ts"
+    "api:smoke": "tsx src/scripts/api-smoke.ts",
+    "budget:test": "tsx src/scripts/budget-test.ts"
   },
   "keywords": [],
   "author": "",
