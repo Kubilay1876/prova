@@ -221,14 +221,14 @@ export class ExamExchange {
       px: b.px ?? "",
       state: !fills ? "live" : ratio < 1 ? "canceled" : "filled",
       accFillSz: fills ? filledBase.toFixed(8) : "0",
-      avgPx: fills ? String(price) : "",
-      fee: fills ? `-${fee}` : "0",
+      avgPx: filledBase > 0 ? String(price) : "",
+      fee: filledBase > 0 ? `-${fee}` : "0",
       feeCcy: "USDT",
       cTime: now,
       uTime: now,
     };
     this.orders.push(order);
-    if (fills) {
+    if (filledBase > 0) {
       this.fills.push({
         instId: INSTRUMENT,
         tradeId: `T-${order.ordId}`,

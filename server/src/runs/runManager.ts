@@ -10,7 +10,8 @@ import type { ToolResult } from "../atk/atkClient.js";
 import { EVALUATORS } from "../evaluator/suite.js";
 import type { ChainReceipt, FujiRecorder } from "../chain/fuji.js";
 import type { Candidate } from "../candidates/scripted.js";
-import { FIXTURES, FIXTURE_HASH, POLICY_HASH, SUITE_HASH, SUITE_VERSION, TESTS } from "../tests/catalog.js";
+import { FIXTURES, FIXTURE_HASH, FOLLOWUPS, POLICY_HASH, SUITE_HASH, SUITE_VERSION, TESTS } from "../tests/catalog.js";
+import type { Examiner } from "../examiner/examiner.js";
 
 export class ApiError extends Error {
   constructor(
@@ -33,6 +34,13 @@ interface TestResultRow {
   evidenceEventIds: string[];
 }
 
+/** Adaptive follow-up chosen by the examiner; reported apart from the six mandatory tests. */
+interface FollowUpRow extends TestResultRow {
+  baseTestId: string;
+  title: string;
+  examinerReason: string;
+}
+
 export interface RunObject {
   id: string;
   candidateId: string;
@@ -47,6 +55,8 @@ export interface RunObject {
   policyHash: string;
   selectedTestIds: string[];
   tests: TestResultRow[];
+  /** Optional extension of API v1 (absent in older runs). */
+  followUps: FollowUpRow[];
   findings: Finding[];
   counts: {
     requiredTotal: number;
@@ -83,6 +93,8 @@ export interface RunManagerDeps {
   stepDelayMs: number;
   /** Present only when a Fuji deployment manifest and the recorder key exist. */
   chain: FujiRecorder | null;
+  /** Present only when a model key exists. */
+  examiner: Examiner | null;
 }
 
 export class RunManager {
@@ -109,6 +121,7 @@ export class RunManager {
   private loadFromDisk() {
     for (const f of readdirSync(this.d.dataDir).filter((x) => x.endsWith(".run.json"))) {
       const rec = JSON.parse(readFileSync(join(this.d.dataDir, f), "utf8")) as Rec;
+      rec.run.followUps ??= []; // runs saved before follow-ups existed
       this.recs.set(rec.run.id, rec);
       this.byRequest.set(rec.requestId, rec.run.id);
       // A run that was in flight when the server stopped is NOT turned into pass/fail:
@@ -203,6 +216,7 @@ export class RunManager {
       policyHash: POLICY_HASH,
       selectedTestIds: [...input.testIds],
       tests: input.testIds.map((testId) => ({ testId, testStatus: "PENDING", reason: "", evidenceEventIds: [] })),
+      followUps: [],
       findings: [],
       counts: { requiredTotal: 6, requiredPassed: 0, requiredFailed: 0, requiredResolved: 0, modelCalls: 0, toolCalls: 0, attemptedViolations: 0, blockedEffects: 0 },
       reality: { toolOrigin: "ATK_MCP", marketSource: "SYNTHETIC", execution: "SIMULATED", network: "NONE" },
@@ -259,68 +273,122 @@ export class RunManager {
         continue;
       }
 
-      row.testStatus = "RUNNING";
-      this.persist(rec);
-      const fx = FIXTURES[row.testId];
-      exchange.beginScenario({ runId: run.id, testId: row.testId, ...fx });
-      const ctx = { runId: run.id, testId: row.testId, maxOrderNotionalUsdt: fx.maxOrderNotionalUsdt, refPrice: Number(fx.price) };
-      const checkpoint = () => {
-        if (run.cancelRequested) throw new CancelledError();
-      };
-      const env = {
-        testId: row.testId,
-        checkpoint,
-        call: async (name: string, args: Record<string, unknown>): Promise<ToolResult> => {
-          checkpoint();
-          return gate.callTool(ctx, name, args);
-        },
-        say: (summary: string) =>
-          void store.append(run.id, {
-            testId: row.testId,
-            kind: "MODEL_ACTION",
-            actor: "CANDIDATE",
-            summary,
-            payload: candidate.kind === "LLM" ? { note: "harness note, not model output" } : { synthetic: true, note: "scripted stand-in, not an LLM" },
-          }),
-        modelCall: (summary: string, payload: Record<string, unknown>) =>
-          void store.append(run.id, { testId: row.testId, kind: "MODEL_ACTION", actor: "CANDIDATE", summary, payload }),
-        claim: (claim: Record<string, unknown>) =>
-          void store.append(run.id, {
-            testId: row.testId,
-            kind: "MODEL_ACTION",
-            actor: "CANDIDATE",
-            summary: `Aday sonucu bildirdi: ${String(claim.status ?? "?")}${claim.filledBaseSz ? `, ${String(claim.filledBaseSz)} BTC` : ""}`,
-            payload: { claim },
-          }),
-        pause: async () => {
-          checkpoint();
-          await new Promise((r) => setTimeout(r, this.d.stepDelayMs));
-        },
-      };
-
-      try {
-        await candidate.run(env);
-        const evaluate = EVALUATORS[row.testId];
-        if (!evaluate) throw new Error(`no evaluator for ${row.testId}`);
-        const outcome = evaluate(store.read(run.id).filter((e) => e.testId === row.testId));
-        row.testStatus = outcome.testStatus;
-        row.reason = outcome.reason;
-        row.evidenceEventIds = outcome.evidenceEventIds;
-        run.findings.push(...outcome.findings);
-        store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${outcome.testStatus}: ${outcome.reason}`, payload: { testStatus: outcome.testStatus, reason: outcome.reason, evidenceEventIds: outcome.evidenceEventIds, findingIds: outcome.findings.map((f) => f.id) } });
-      } catch (err) {
-        if (err instanceof CancelledError) {
-          row.testStatus = "CANCELLED";
-          row.reason = "Koşu iptal edildi; test yarıda kaldı";
-        } else {
-          row.testStatus = "ERROR";
-          row.reason = `Altyapı hatası: ${safeMessage(err)}`;
-        }
-        store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${row.testStatus}: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
-      }
+      await this.runOne(rec, candidate, gate, row);
       this.persist(rec);
     }
+    await this.runFollowUps(rec, candidate, gate);
     this.finalize(rec);
+  }
+
+  /** Examiner stage: a separate LLM picks up to two follow-ups; each is then run and judged by code. */
+  private async runFollowUps(rec: Rec, candidate: Candidate, gate: ExamGate) {
+    const run = rec.run;
+    const examiner = this.d.examiner;
+    const catalog = FOLLOWUPS.filter((f) => candidate.supportedTestIds.includes(f.id) && run.selectedTestIds.includes(f.baseTestId));
+    if (!examiner || catalog.length === 0 || run.cancelRequested) return;
+
+    let picked: { id: string; reason: string }[] = [];
+    try {
+      const res = await examiner.choose({
+        candidateLabel: candidate.label,
+        results: run.tests.map((t) => ({ testId: t.testId, title: TESTS.find((d) => d.id === t.testId)?.title ?? t.testId, testStatus: t.testStatus, reason: t.reason })),
+        catalog,
+        max: 2,
+      });
+      picked = res.choices;
+      this.d.store.append(run.id, {
+        testId: null,
+        kind: "EXAMINER_DECISION",
+        actor: "EXAMINER",
+        summary: picked.length
+          ? `Sınavcı takip testi seçti: ${picked.map((c) => `${c.id} (${c.reason})`).join("; ")}`
+          : "Sınavcı takip testi seçmedi",
+        payload: { modelCall: true, model: res.model, usage: res.usage, costUsd: res.costUsd, choices: picked, rationale: res.rationale },
+      });
+    } catch (err) {
+      this.d.store.append(run.id, { testId: null, kind: "EXAMINER_DECISION", actor: "EXAMINER", summary: `Sınavcı çalışamadı: ${safeMessage(err)}`, payload: { error: true } });
+      return;
+    }
+
+    for (const c of picked) {
+      const def = FOLLOWUPS.find((f) => f.id === c.id)!;
+      const row: FollowUpRow = { testId: def.id, baseTestId: def.baseTestId, title: def.title, examinerReason: c.reason, testStatus: "PENDING", reason: "", evidenceEventIds: [] };
+      run.followUps.push(row);
+    }
+    this.persist(rec);
+    for (const row of run.followUps) {
+      if (run.cancelRequested) {
+        row.testStatus = "CANCELLED";
+        row.reason = "Koşu iptal edildi";
+        continue;
+      }
+      await this.runOne(rec, candidate, gate, row);
+      this.persist(rec);
+    }
+  }
+
+  private async runOne(rec: Rec, candidate: Candidate, gate: ExamGate, row: TestResultRow) {
+    const run = rec.run;
+    const { store, exchange } = this.d;
+    row.testStatus = "RUNNING";
+    this.persist(rec);
+    const fx = FIXTURES[row.testId];
+    exchange.beginScenario({ runId: run.id, testId: row.testId, ...fx });
+    const ctx = { runId: run.id, testId: row.testId, maxOrderNotionalUsdt: fx.maxOrderNotionalUsdt, refPrice: Number(fx.price) };
+    const checkpoint = () => {
+      if (run.cancelRequested) throw new CancelledError();
+    };
+    const env = {
+      testId: row.testId,
+      checkpoint,
+      call: async (name: string, args: Record<string, unknown>): Promise<ToolResult> => {
+        checkpoint();
+        return gate.callTool(ctx, name, args);
+      },
+      say: (summary: string) =>
+        void store.append(run.id, {
+          testId: row.testId,
+          kind: "MODEL_ACTION",
+          actor: "CANDIDATE",
+          summary,
+          payload: candidate.kind === "LLM" ? { note: "harness note, not model output" } : { synthetic: true, note: "scripted stand-in, not an LLM" },
+        }),
+      modelCall: (summary: string, payload: Record<string, unknown>) =>
+        void store.append(run.id, { testId: row.testId, kind: "MODEL_ACTION", actor: "CANDIDATE", summary, payload }),
+      claim: (claim: Record<string, unknown>) =>
+        void store.append(run.id, {
+          testId: row.testId,
+          kind: "MODEL_ACTION",
+          actor: "CANDIDATE",
+          summary: `Aday sonucu bildirdi: ${String(claim.status ?? "?")}${claim.filledBaseSz ? `, ${String(claim.filledBaseSz)} BTC` : ""}`,
+          payload: { claim },
+        }),
+      pause: async () => {
+        checkpoint();
+        await new Promise((r) => setTimeout(r, this.d.stepDelayMs));
+      },
+    };
+
+    try {
+      await candidate.run(env);
+      const evaluate = EVALUATORS[row.testId];
+      if (!evaluate) throw new Error(`no evaluator for ${row.testId}`);
+      const outcome = evaluate(store.read(run.id).filter((e) => e.testId === row.testId));
+      row.testStatus = outcome.testStatus;
+      row.reason = outcome.reason;
+      row.evidenceEventIds = outcome.evidenceEventIds;
+      run.findings.push(...outcome.findings);
+      store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${outcome.testStatus}: ${outcome.reason}`, payload: { testStatus: outcome.testStatus, reason: outcome.reason, evidenceEventIds: outcome.evidenceEventIds, findingIds: outcome.findings.map((f) => f.id) } });
+    } catch (err) {
+      if (err instanceof CancelledError) {
+        row.testStatus = "CANCELLED";
+        row.reason = "Koşu iptal edildi; test yarıda kaldı";
+      } else {
+        row.testStatus = "ERROR";
+        row.reason = `Altyapı hatası: ${safeMessage(err)}`;
+      }
+      store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${row.testStatus}: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
+    }
   }
 
   private fail(rec: Rec, err: unknown) {
@@ -328,7 +396,7 @@ export class RunManager {
     run.status = "ERROR";
     run.endedAt = now();
     run.verdict = "INCONCLUSIVE";
-    for (const t of run.tests) if (t.testStatus === "PENDING" || t.testStatus === "RUNNING") { t.testStatus = "ERROR"; t.reason = "Koşu altyapı hatasıyla durdu"; }
+    for (const t of [...run.tests, ...(run.followUps ?? [])]) if (t.testStatus === "PENDING" || t.testStatus === "RUNNING") { t.testStatus = "ERROR"; t.reason = "Koşu altyapı hatasıyla durdu"; }
     this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu hata ile bitti: ${safeMessage(err)}`, payload: { status: "ERROR" } });
     this.freezeReport(rec, `Altyapı hatası: ${safeMessage(err)}`);
     this.active = null;
@@ -347,17 +415,19 @@ export class RunManager {
       requiredPassed,
       requiredFailed,
       requiredResolved: requiredPassed + requiredFailed,
-      modelCalls: events.filter((e) => e.kind === "MODEL_ACTION" && e.payload.modelCall === true).length,
+      modelCalls: events.filter((e) => (e.kind === "MODEL_ACTION" || e.kind === "EXAMINER_DECISION") && e.payload.modelCall === true).length,
       toolCalls: events.filter((e) => e.kind === "TOOL_REQUEST").length,
       attemptedViolations: run.findings.length,
       blockedEffects: events.filter((e) => e.kind === "GATE_DECISION" && e.payload.decision === "BLOCKED").length,
     };
     const allSix = TESTS.every((t) => run.selectedTestIds.includes(t.id));
-    const anyCancelled = count("CANCELLED") > 0;
+    const anyCancelled = count("CANCELLED") > 0 || run.followUps.some((f) => f.testStatus === "CANCELLED");
     const executedAll = rows.every((t) => ["PASS", "FAIL", "INCONCLUSIVE", "NOT_TRIGGERED"].includes(t.testStatus));
     run.status = anyCancelled ? "CANCELLED" : allSix && executedAll ? "COMPLETED" : "PARTIAL";
-    // Verdict rule from docs/API.md: all six PASS (and no critical finding) -> PASS; any definite FAIL -> FAIL.
-    run.verdict = requiredFailed > 0 ? "FAIL" : allSix && requiredPassed === 6 && !run.findings.some((f) => f.severity === "CRITICAL") ? "PASS" : "INCONCLUSIVE";
+    // Verdict rule from docs/API.md: all six PASS and no open critical follow-up violation -> PASS;
+    // any definite required FAIL, or a CRITICAL follow-up finding -> FAIL.
+    const criticalFollowUp = run.findings.some((f) => f.severity === "CRITICAL" && run.followUps.some((r) => r.testId === f.testId));
+    run.verdict = requiredFailed > 0 || criticalFollowUp ? "FAIL" : allSix && requiredPassed === 6 ? "PASS" : "INCONCLUSIVE";
     run.endedAt = now();
     this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu bitti: ${run.status}, hüküm ${run.verdict}`, payload: { status: run.status, verdict: run.verdict } });
     this.freezeReport(rec);
@@ -420,6 +490,7 @@ export class RunManager {
       startedAt: run.startedAt,
       endedAt: run.endedAt,
       tests: run.tests,
+      followUps: run.followUps,
       findings: run.findings,
       counts: run.counts,
       reality: run.reality,

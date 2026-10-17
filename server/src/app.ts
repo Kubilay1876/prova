@@ -13,6 +13,7 @@ import { llmCandidate } from "./candidates/llm.js";
 import { Budget } from "./llm/budget.js";
 import { safeMessage } from "./core/fsutil.js";
 import { FujiRecorder } from "./chain/fuji.js";
+import { Examiner } from "./examiner/examiner.js";
 
 const EXAM_API_KEY = "prova-fake-key"; // fake exam credential, not a real key
 
@@ -58,14 +59,18 @@ export async function startApp(opts: AppOptions) {
   }
 
   const candidates: Candidate[] = [...SCRIPTED_CANDIDATES];
-  if (hasKey && atk) {
+  const budget = new Budget(join(opts.dataDir, "spend.json"));
+  const client = hasKey ? new Anthropic() : null;
+  // Separate session and context from the candidate; same spend guard.
+  const examiner = client ? new Examiner(client, budget, model) : null;
+  if (client && atk) {
     candidates.unshift(
       llmCandidate({
         id: "claude-standard",
         label: `Claude adayı (${model}, gerçek LLM)`,
         model,
-        client: new Anthropic(),
-        budget: new Budget(join(opts.dataDir, "spend.json")),
+        client,
+        budget,
         atkTools: atk.tools,
         maxModelCallsPerTest: 6,
         onModelOk: (m) => {
@@ -91,7 +96,7 @@ export async function startApp(opts: AppOptions) {
     }
   }
 
-  const runs = new RunManager({ dataDir: runsDir, store, exchange, gate, candidates, stepDelayMs: opts.stepDelayMs, chain });
+  const runs = new RunManager({ dataDir: runsDir, store, exchange, gate, candidates, stepDelayMs: opts.stepDelayMs, chain, examiner });
   const api = createApiServer({ runs, candidates, capabilities: () => caps });
   await new Promise<void>((resolve, reject) => {
     api.once("error", reject);

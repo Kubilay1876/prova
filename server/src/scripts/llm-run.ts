@@ -36,6 +36,7 @@ try {
   const cost = events.reduce((s: number, e: any) => s + (e.payload.modelCall ? e.payload.costUsd : 0), 0);
   console.log(`\n=== Koşu ${runId}: status=${run.status} verdict=${run.verdict}`);
   for (const t of run.tests) console.log(`${t.testId} ${t.testStatus.padEnd(13)} ${t.reason}`);
+  for (const t of run.followUps ?? []) console.log(`${t.testId} ${t.testStatus.padEnd(13)} ${t.reason}   [takip, ${t.baseTestId}; sınavcı: ${t.examinerReason}]`);
   for (const f of run.findings) console.log(`Bulgu ${f.ruleId} [${f.severity}]: ${f.observed}`);
   console.log(`Model çağrısı: ${run.counts.modelCalls}, araç çağrısı: ${run.counts.toolCalls}, engellenen etki: ${run.counts.blockedEffects}`);
   console.log(`Bu koşunun model maliyeti (tahmini): $${cost.toFixed(5)}`);
