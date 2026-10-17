@@ -15,7 +15,7 @@
 
 - A: `server/`, `contracts/`, `docs/API.md`, `docs/backend/`, kök README/Git dosyaları.
 - B: `web/`, `docs/frontend/`; kendi package ve lock dosyası.
-- Aynı bilgisayarda iki ayrı Git işlemi yapılmaz. Ortak başlangıç A tarafından hazırlanır; ayrı checkout/branch düzenini A kurar. B bu teslimde Git başlatmadı veya kök ayarı değiştirmedi.
+- Aynı bilgisayarda iki ayrı Git işlemi yapılmaz. Ortak başlangıç A tarafından hazırlanır; ayrı checkout/branch düzenini A kurar. B özel depoyu ayrı klasöre klonladı; b-web dalında GitHub noreply kimliğiyle commit/push yapıyor.
 - Entegrasyonda aynı bilgisayarda `server` ve `web` çalışır. İki bilgisayarın localhost’u birbirine bağlanmaz.
 
 ## Model API bütçesi
@@ -29,10 +29,10 @@
 | Hata ve tekrar payı | 3 USD |
 | Toplam çalışma hedefi | 20 USD |
 
-Bu dağılım tahmindir, uygulanmış bir harcama limiti değildir. Sağlayıcı/model ve fiyatları bilinmediği için kaç çağrıya veya tokene yeteceği henüz hesaplanmadı. Arayüz geliştirmesi fixture ile devam eder. Gerçek model çağrılarını A yürütür; aynı fixture üzerinde gereksiz tam sınav tekrarları yerine önce tek T03 senaryosu doğrulanır. A backend’de çağrı/token sınırı, sınırlı retry ve harcama takibi hazırlamalı; ortak hesabın toplam bakiyesi takımın kendi kalan bütçesi sanılmamalı.
+Bu dağılım tahmindir, uygulanmış bir harcama limiti değildir. Güncel sağlayıcı Anthropic/Claude; bu eski planlama dağılımı backend harcama limitini yükseltme talimatı değildir. Arayüz geliştirmesi fixture ile devam eder. Gerçek model çağrılarını A yürütür; aynı fixture üzerinde gereksiz tam sınav tekrarları yerine önce tek T03 senaryosu doğrulanır. A güncel backend’de çağrı sınırı ve varsayılan 3 USD harcama sigortası ekledi; ortak hesabın toplam bakiyesi takımın kendi kalan bütçesi sanılmamalı.
 
 ## Teslim önceliği
 
 Çalışan ilk gerçek senaryo, altılı sentetik başarı ekranından değerlidir. Altı testin tamamı hazır olmadan ilk entegrasyon yapılır; karne eksik kapsamı gösterir. Fuji dosya kaydının bütünlüğünü kanıtlar; test hükmünün veya gerçek harcamanın doğruluğunu tek başına kanıtlamaz.
 
-Güncel durum: A'nın 54ac467 backend'i bu checkout'ta gerçek ATK MCP ile doğrulandı. Yalnız T03 ve betik adaylar çalışıyor. B'nin gerçek API ekran akışı tamamlandı. OneDrive veri yazımı sorunu için geçici dataDir ile test yapıldı; ayrıntı STATUS.md ve contract-questions.md'de. 19.00 teslimine kadar öncelik birleştirme ve bu dürüst kapsamla demo provası.
+Güncel durum: A'nın b2219dc backend'i altı zorunlu test, gerçek Claude ve sınavcı takiplerini içeriyor. B bu alanları ekrana bağladı; 7 yeni HTTP deneme kontrolü ve standart OneDrive yolunda 9 gerçek ATK/betik kontrolü geçti. Ücretli Claude çağrısı B tarafından tekrarlanmadı. Fuji manifesti bekleniyor. Öncelik b-web'i birleştirmek ve A'nın gerçek tamamlanmış koşusuyla demo provası.

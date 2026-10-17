@@ -26,15 +26,17 @@ pnpm.cmd dev
 
 Frontend http://127.0.0.1:5173, backend http://127.0.0.1:8787. Vite /api proxy'si hazır; port doluysa sessizce değişmez. Frontend kendi package ve lock dosyasına sahip. web/pnpm-workspace.yaml yalnız web bağımlılıklarının derleme iznini tutar; kök workspace yok.
 
-### Bu OneDrive ortamında test edilen alternatif
+### OneDrive yeniden kontrolü
 
-Standart backend `data/` yazımında EPERM verdi. A kodu değiştirilmeden, server/ terminalinde:
+Backend b2219dc ile standart `npm run dev` ve normal data/ yolu üzerinden 9 gerçek API tarayıcı kontrolü geçti. Önceki EPERM tekrarlanmadı. `web/tests/serve-backend.ts` geçici veriyle izolasyon için tutuldu; bu teslim kontrolünde gerekmedi.
 
-```powershell
-npm exec -- tsx ../web/tests/serve-backend.ts
-```
+## dev-0.3 güncellemesi
 
-Bu B test başlatıcısı A'nın startApp fonksiyonuna geçici dataDir verir. Portlar aynıdır. Önce standart backend kapatılmalı. Backend kaynaklarının düzeltildiği anlamına gelmez. Asıl hata ve yol sızıntısı contract-questions.md'de.
+- `run.followUps` hem sınavda hem karnede ayrı bölümde gösterilir. Sınavcının gerekçesi, bağlı zorunlu test, durum ve kanıt bağlantısı görünür.
+- Genel EXAMINER_DECISION seçim/hata kaydı açılabilir. Eski kayıtta alan yoksa veya liste boşsa takip başarısı iddia edilmez.
+- Zorunlu kapsam T01–T06 ile sınırlı; Claude'un takip destekleri 10/6 sayımına dönüşmez. Model hazırlığı aday türüne çevrilmez, API label'ı kullanılır.
+- Altı PASS + kritik takip bulgusunda backend FAIL korunur. Karşılaştırma adaptif seçim farkını açıklar.
+- A'nın gerçek Claude/takip koşuları STATUS.md'de bildirilmiş; B bu oturumda ücretli çağrı yapmadı.
 
 ## API uyumu
 
@@ -65,12 +67,15 @@ Playwright kuruluysa:
 ```powershell
 node tests/real-api-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
 node tests/browser-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
+node tests/followups-smoke.mjs "PLAYWRIGHT_INDEX_MJS_TAM_YOLU"
 ```
 
-Gerçek test iki sunucunun çalışmasını gerektirir ve 9 senaryo içerir. Fixture/HTTP deneme paketi ayrı geçici browser profiliyle 16 senaryo içerir. Microsoft Edge kullanılır; kullanıcı tarayıcı profiline erişilmez. Ekran görüntüleri/JSON sonuçları artifacts/ altında Git dışında tutulur.
+Gerçek test iki sunucunun çalışmasını gerektirir ve 9 senaryo içerir. Fixture/HTTP deneme paketi 16, yeni takip testi HTTP deneme paketi 7 senaryo içerir. İkisi de gerçek model kanıtı değildir; ayrı geçici browser profili kullanır. Microsoft Edge kullanılır; kullanıcı tarayıcı profiline erişilmez. Ekran görüntüleri/JSON sonuçları artifacts/ altında Git dışında tutulur.
 
 ## Demo sırası
 
-Adayın betik/LLM olmadığını söyle → altı testten yalnız T03 desteğini göster → yeniden göndereni başlat → bulgudan kanıta git → PARTIAL ve yerel kaydı ayır → gerçek raporu indir → hash eşleşmesini göster. PRODUCT.md iki dakikalık konuşma ve Q&A içerir.
+Tamamlanmış gerçek Claude koşusunu aç → altı zorunlu sonucu göster → sınavcının takip gerekçesine ve kanıta git → ayrıca betik T03 ihlalini açık etiketiyle göster → sınav sonucu/karne kaydını ayır → gerçek rapor ve hash eşleşmesini göster. PRODUCT.md iki dakikalık konuşma ve Q&A içerir.
 
 Model bütçesi: ortak 100 USD'nin tamamı bu takımın değil. Yaklaşık 33,33 USD veya daha az; çalışma hedefi 20 USD (12 geliştirme,5 demo,3 tekrar). A gerçek kalan payı teyit etmeli. Şimdiki entegrasyon model çağrısı yapmıyor.
+
+A backend bütçe sigortası varsayılan 3 USD; önceki 20 USD planlama hedefi bu limiti yükseltme talimatı değildir.

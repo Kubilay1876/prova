@@ -1,57 +1,55 @@
-# PROVA — iki dakikalık sunum ve Q&A
+# PROVA — iki dakikalık sunum ve jüri hazırlığı
 
-17 Ekim 2026, 19.00 teslimi. Bu metin bu checkout'ta gerçekten çalışan T03 prototipine göredir.
+Güncel kapsam: backend b2219dc, suite dev-0.3. Claude ve sınavcıya ilişkin gerçek koşu kanıtı A'nın docs/backend/STATUS.md kaydıdır. B, ücretli çağrıyı tekrarlamadı; ekranları ve ücretsiz gerçek ATK/betik akışını doğruladı.
 
-## Ürün ve ilk kullanıcı
+## Demo hazırlığı
 
-PROVA, trading agent geliştiricisinin bir sürüme yetki vermeden önce kontrollü hata koşullarındaki davranışı incelemesi için tasarlanıyor. İlk kullanıcı, “yanıt kaybolduğunda adayım ikinci emir üretiyor mu?” sorusuna kanıtlı cevap arayan ATK geliştiricisi.
+Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API listesinde bulunmalı. Süreyi korumak için önceden tamamlanmış gerçek Claude koşusunu geçmişten açın; yoksa gerçek betik T03 akışını gösterip kapsamı söyleyin. UI DEMO verisini gerçek Claude koşusu diye sunmayın. Fuji manifesti gelmeden zincir kaydı iddiası yok.
 
-Bugünkü prototipte adaylar LLM değil, üç kod betiği. Gerçek ATK MCP süreci yerel sanal borsaya bağlanıyor. Yalnız T03 çalışıyor; tam altılı sınav ve zincir kaydı yok. Ekran testleri/örnek fixture'lar bu gerçek entegrasyondan ayrı etiketli.
+## İki dakikalık konuşma
 
-## İki dakikalık konuşma ve ekran akışı
+**0:00–0:20 — Sorun.**
 
-**0:00–0:20 — Problem ve dürüst kapsam.**
+“Bir trading agent'ına yetki vermeden önce sadece ne söylediğini değil, hata anında ne yaptığını görmek istiyoruz. PROVA, belirli bir aday sürümünü kontrollü sanal borsada sınar; kararını olay kaydına bağlayan bir karne üretir.”
 
-“Bir agent'a işlem yetkisi verdiğimizde, yanıt gelmediği an ne yaptığını bilmek istiyoruz. Emir kabul edildi ama yanıt kaybolduysa ikinci kez göndermek risklidir. PROVA bunu kontrollü bir sanal borsada inceleyen bir prototip. Bugün gerçek LLM yerine üç açıkça etiketlenmiş kod betiği kullanıyoruz; yalnız kayıp yanıt testi çalışıyor.”
+**0:20–0:45 — Aday ve sabit sınav.**
 
-**0:20–0:50 — Yeniden gönderen aday.**
+“Bu adayın adında modeli ve gerçek LLM olduğu yazıyor. Altı zorunlu test bütçe, eski fiyat, kayıp yanıt, gerçekleşme iddiası, bekleme ve geçerli görevi tamamlama davranışlarını sınar. Araç bağlantısı gerçek OKX ATK MCP; piyasa verisi sentetik, emirler sanal.”
 
-“Bu aday yanıt alamayınca yeni kimlikle ikinci emir istiyor. Gerçek ATK MCP çağrısı yerel sanal borsaya ulaşıyor. Burada ilk emrin kabulünü, adayın ikinci talebini ve geçidin engellemesini ayrı görüyoruz. Piyasa verisi sentetik ve hiçbir gerçek emir verilmiyor.”
+**0:45–1:10 — Sınavcı ve takip.**
 
-**0:50–1:15 — Bulgu ve kanıt.**
+“Sınavcı ayrı bir model oturumunda sonuçları okur, sabit katalogdan en fazla iki takip seçer. Burada hangi zorunlu testi derinleştirdiğini, neden seçtiğini ve sonucunu görüyoruz. Sınavcı hüküm vermez; değerlendirmeyi kod yapar. Takipler altı zorunlu testin sayısına eklenmez.”
 
-“Bulguya tıkladığımızda kararın dayandığı olaylar açılıyor. Geçit ikinci etkiyi durdurmuş olsa bile adayın hatalı talebi kaybolmuyor. Hükmü arayüz üretmiyor; backend'in kod değerlendiricisi veriyor.”
+**1:10–1:35 — Kanıt.**
 
-**1:15–1:40 — Kapsam ve sürüm.**
+“Bir takip testine veya bulguya tıklayınca ilgili olayları açıyoruz. Adayın talebi, sanal borsa defteri ve geçidin engellediği etki ayrıdır. Altı test geçse bile kritik takip ihlali genel hükmü FAIL yapabilir. Hata örneğini göstermek için ayrıca yeniden gönderen betiğin T03 kaydını kullanıyoruz; bunu LLM hatası diye sunmuyoruz.”
 
-“Önce durumu sorgulayan betik T03'ü geçiyor. Fakat kalan beş test uygulanmadığı için genel karne PASS değil; PARTIAL ve INCONCLUSIVE. Aday sürümü, paket, fixture ve politika kimlikleri görünür. Aynı koşullar olmadan sürümleri eşdeğer karşılaştırmıyoruz.”
+**1:35–2:00 — Karne.**
 
-**1:40–2:00 — Karne bütünlüğü ve sonraki adım.**
-
-“Dondurulmuş gerçek raporu indirip tam dosya hash'ini backend referansıyla karşılaştırabiliyoruz. Dosyaya bir satır sonu ekleyince eşleşme bozuluyor. Bu yerel bütünlük kontrolü; Fuji manifesti olmadığı için zincir doğrulaması bekliyor. Sonraki adım gerçek LLM adayını ve kalan kuralları aynı kanıt hattına bağlamak.”
+“Karne aday sürümünü, sınav koşullarını ve kanıtları taşır. Raporu indirip tam dosya baytlarının SHA-256 değerini karşılaştırabiliyoruz. Sınav sonucu ve karne kaydı ayrı: burada zincir makbuzu yoksa yerel kayıt yazar. Bu, yalnız bu sürümün bu koşudaki davranışıdır; genel güvenlik veya yatırım başarısı garantisi değildir.”
 
 ## Jüri soruları
 
-**Bugün otonom LLM agent çalışıyor mu?** Hayır. Adaylar kod betikleri; model çağrı sayısı sıfır. Bu teslim gerçek ATK/sanal borsa/değerlendirici/rapor hattını doğruluyor. Agentic design hedefini tamamlanmış başarı gibi sunmuyoruz.
+**Gerçek LLM çalıştı mı?** A'nın kayıtlarına göre Claude ile altı test ve ardından F01/F05 takipleri PASS aldı. B'nin bu güncellemesindeki model/sınavcı ekran kontrolleri sentetik HTTP yanıtlarıyla yapıldı; gerçek LLM çalıştırma kanıtı bunlar değildir.
 
-**T03 gerçekten neyi ölçüyor?** Bir emir kabul edilip yanıtı kaybolunca adayın yeni ekonomik talep vermeden önce durum sorgulayıp sorgulamadığını. Genel yatırım başarısını veya bütün hataları ölçmüyor.
+**Agentic design nerede?** Aday gerçek araç şemalarıyla karar verir; ayrı bağlamdaki sınavcı sonuçlara göre en fazla iki katalog testi seçer ve gerekçe yazar. Kod seçimi sınırlar ve hükmü verir. Sınavcı serbestçe yeni test kodu üretmez.
 
-**Kötü aday engellendiyse neden FAIL?** Engelleme geçidin başarısıdır; adayın ikinci talebi yine bulgudur. Talep ve oluşan ekonomik etki ayrı kaydedilir.
+**Altı test de geçtiyse iyi agent mı?** Yalnız o koşudaki kapsamı geçti. A'nın gözleminde aynı model farklı koşularda farklı karar verebiliyor. Altı PASS tek başına testin ayırt ediciliğini kanıtlamaz; kötü davranış örneği şimdilik açıkça etiketli betik adaydır.
 
-**Bir test geçince agent güvenli mi?** Hayır. T03 PASS, altı testin geçtiği anlamına gelmez. Kalan beş test UNSUPPORTED; genel sonuç INCONCLUSIVE ve PARTIAL.
+**Kötü aday engellendiyse neden FAIL?** Geçidin engellemesi ile adayın ihlal talebi ayrı olgulardır. İkinci emir etkisi durdurulsa da talep kanıtta kalır.
 
-**OKX tarafında gerçek olan ne?** Gerçek okx-trade-mcp 1.4.8 süreci ve araç çağrıları. Hedef yerel sanal borsa, veriler sentetik, emirler sanal. Canlı borsada işlem yapılmadı.
+**Takip başarısız olursa?** Arayüz takip durumunu ve backend'in genel hükmünü ayrı gösterir. Kritik takip bulgusu genel FAIL üretebilir. Boş takip listesi veya sınavcı hatası takiplerin geçtiği anlamına gelmez.
 
-**Avalanche entegrasyonu var mı?** Bu teslimde zincir kaydı yok. Yerel SHA-256 karşılaştırması var; Fuji kontrat manifesti ve ABI gelmeden zincir doğrulaması yapılmıyor. Avalanche puanı kazanıldığı söylenmez.
+**OKX tarafında gerçek olan?** okx-trade-mcp süreci ve araç çağrıları. Hedef yerel sınav borsası; gerçek piyasada emir verilmez. PROVA'nın report_result bildirim aracı ATK aracı değildir.
 
-**Dosya hash'i neyi kanıtlar?** Dosyanın referans alınan baytlarla aynı olduğunu. Test hükmünün doğruluğunu veya adayın bütün koşullarda güvenli olduğunu tek başına kanıtlamaz. Referans hash de bağımsız bir zincir makbuzu değildir.
+**Avalanche hazır mı?** A kontratı yazıp derlediğini bildiriyor; bu checkout'ta manifest yok. Bağımsız zincir doğrulaması bekliyor. Dosya hash eşleşmesi zincir makbuzu yerine geçmez.
 
-**Neden mevcut testlerden farklı?** Ürün hipotezi: kayıp yanıt gibi finansal araç senaryolarında adayın talebini bağımsız defter kaydı ve geçit kararıyla ilişkilendirip sürüme bağlı, incelenebilir rapor vermek. Rakiplerden üstünlük veya doğrulanmış müşteri iddiası yok.
+**Maliyet kontrolü?** A'nın kodunda varsayılan 3 USD harcama sigortası, model çağrı sınırı ve maliyet takibi var. Ortak 100 USD'nin tamamı bizim değil. A'nın tek koşu tahmini gelecekteki fiyat veya garanti değildir; B bu oturumda ücretli model çağrısı yapmadı.
 
-**İş modeli ne?** İlk hipotez geliştirici ekiplerine sürüm karşılaştırma/CI raporu sunmak. İlk doğrulama kanalı ATK geliştiricileriyle tek hata kaydını birlikte incelemek. Görüşme, ödeme, OKX.AI kaydı veya müşteri doğrulaması henüz yok.
+**Gerçek kullanıcı değeri ve iş modeli?** İlk hedef trading agent geliştiricileri: bir sürümün hatalı finansal araç davranışını kanıtıyla incelemek. Sürüm karşılaştırması ve CI raporu ürün hipotezidir; henüz müşteri/ödeme doğrulaması yok.
 
-**Demo neden burada farklı bir backend başlatıcısı kullanıyor?** OneDrive runtime veri yazımında EPERM görüldü. Kaynak backend değiştirilmedi; mevcut dataDir seçeneğiyle test verisi geçici dizine yönlendirildi. Kalıcı yol sorunu A'ya açık not olarak iletildi.
+**OneDrive hatası ne oldu?** A'nın kayıt düzeltmesi sonrası B, standart veri yolunda 9 gerçek API/ATK kontrolünü geçirdi. Önceki EPERM tekrarlanmadı.
 
-## Cetvele göre sunum disiplini
+## Puan cetveli
 
-Ürün/gerçek dünya değeri 25, agentic design 20, demo 20, teknik 15, Avalanche 10, OKX 10. Bunlar cetvel ağırlıkları, kazanılmış puan değil. Ürün değerini somut hata/kanıt akışıyla anlatın; eksik LLM ve Avalanche parçalarını mevcutmuş gibi göstermeyin.
+Ürün/gerçek dünya değeri 25, agentic design 20, demo 20, teknik 15, Avalanche 10, OKX 10. Bunlar ağırlıklar; kazanılmış puan değildir. Kanıtı gösterin, eksik zincir kaydını tamamlanmış saymayın.

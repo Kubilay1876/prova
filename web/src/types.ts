@@ -6,12 +6,13 @@ export interface Health { apiVersion: '1'; serverTime: string; capabilities: Rec
 export interface Candidate { id: string; label: string; versionHash: string | null; provenance: 'TEAM_DEMO' | 'EXTERNAL'; supportedTestIds: string[] }
 export interface TestDefinition { id: string; title: string; description: string; required: boolean; supported: boolean; unsupportedReason: string | null }
 export interface TestResult { testId: string; testStatus: TestStatus; reason: string; evidenceEventIds: string[] }
+export interface FollowUp extends TestResult { baseTestId: string; title: string; examinerReason: string }
 export interface Finding { id: string; testId: string; ruleId: string; severity: 'CRITICAL' | 'HIGH' | 'FUNCTIONAL'; title: string; observed: string; expected: string; evidenceEventIds: string[] }
 export interface RunEvent { id: string; runId: string; seq: number; timestamp: string; testId: string | null; kind: 'EXAMINER_DECISION' | 'MODEL_ACTION' | 'TOOL_REQUEST' | 'TOOL_RESPONSE' | 'LEDGER_EVENT' | 'GATE_DECISION' | 'TEST_RESULT' | 'RUN_STATUS'; actor: 'EXAMINER' | 'CANDIDATE' | 'ATK' | 'GATE' | 'EXCHANGE' | 'EVALUATOR' | 'SYSTEM'; summary: string; payload: Record<string, unknown> }
 export interface RunSummary { id: string; candidateId: string; candidateVersionHash: string | null; status: Status; verdict: Verdict | null; startedAt: string | null }
 export interface Run extends RunSummary {
   cancelRequested: boolean; endedAt: string | null; suiteHash: string | null; fixtureHash: string | null; policyHash: string | null;
-  selectedTestIds: string[]; tests: TestResult[]; findings: Finding[];
+  selectedTestIds: string[]; tests: TestResult[]; followUps?: FollowUp[]; findings: Finding[];
   counts: { requiredTotal: number; requiredPassed: number; requiredFailed: number; requiredResolved: number; modelCalls: number; toolCalls: number; attemptedViolations: number; blockedEffects: number };
   reality: { toolOrigin: 'ATK_MCP' | 'UNVERIFIED'; marketSource: 'LIVE' | 'CAPTURED' | 'SYNTHETIC' | 'MODIFIED_MARKET'; execution: 'SIMULATED' | 'NONE'; network: 'NONE' | 'FUJI' };
   credentialStatus: 'LOCAL_ONLY' | 'PENDING' | 'FUJI_VERIFIED' | 'ERROR';
