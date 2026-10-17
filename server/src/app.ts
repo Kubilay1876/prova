@@ -65,6 +65,23 @@ export async function startApp(opts: AppOptions) {
   const client = hasKey ? new Anthropic() : null;
   // Separate session and context from the candidate; same spend guard.
   const examiner = client ? new Examiner(client, budget, model) : null;
+
+  // A key is not proof: one tiny real call (~$0.0001, through the spend guard) verifies the model.
+  if (client) {
+    try {
+      budget.reserve(model, 100, 1000);
+      const r = await client.messages.create({
+        model,
+        max_tokens: 1000,
+        output_config: { effort: "low" },
+        messages: [{ role: "user", content: "Reply with exactly: OK" }],
+      });
+      budget.charge(model, r.usage);
+      caps.llm = { status: "VERIFIED", checkedAt: new Date().toISOString(), message: `${model} açılış çağrısı başarılı` };
+    } catch (err) {
+      caps.llm = { status: "ERROR", checkedAt: new Date().toISOString(), message: `Model çağrısı başarısız: ${safeMessage(err)}` };
+    }
+  }
   if (client && atk) {
     candidates.unshift(
       llmCandidate({
