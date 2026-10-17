@@ -1949,3 +1949,8 @@ td button {
 .followup-card p, .followups-panel .soft-note p, .followups-panel .warning-banner p { margin: 8px 0 16px; overflow-wrap: anywhere; }
 .followup-card .section-top { flex-wrap: wrap; gap: 10px; }
 @media (max-width: 700px) { .followups-grid { grid-template-columns: 1fr; } }
+
+.verify-network { margin-top: 24px; }
+.verify-network div { margin: 14px 0; }
+.verify-network dt { font-size: 12px; color: #506969; }
+.verify-network dd { margin: 6px 0 0; overflow-wrap: anywhere; font-size: 13px; }

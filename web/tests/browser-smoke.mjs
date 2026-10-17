@@ -14,6 +14,8 @@ const errors = []; page.on('pageerror', error => errors.push(error.message));
 const checks = [];
 async function check(name, action) { await action(); checks.push(name); console.log(`PASS ${name}`); }
 try {
+  // Chain transport is intentionally unavailable in this UI-only suite.
+  await page.route('https://api.avax-test.network/**', route => route.abort('failed'));
   // Explicitly simulate an offline API so this suite can run beside the real backend.
   await page.route('**/api/**', route => route.abort('failed'));
   await check('Backend unavailable is an explicit error; no automatic fixture fallback', async () => {
@@ -76,8 +78,8 @@ try {
     const data = JSON.parse(reportBytes.toString()); delete data.notice;
     await page.locator('input[type="file"]').setInputFiles({ name: 'local-only.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)) });
     await page.getByRole('button', { name: 'Dosyayı doğrula' }).click();
-    await page.getByText('Zincir doğrulaması bekliyor.', { exact: false }).first().waitFor();
-    assert.match(await page.locator('.verification-result').innerText(), /Doğrulanmadı/);
+    await page.getByText('Fuji RPC sorgusu tamamlanamadı.', { exact: false }).first().waitFor();
+    assert.equal(await page.locator('.verification-result .tone-ERROR').count(), 1);
   });
   await check('Cancel waits for final confirmation instead of claiming immediate cancellation', async () => {
     await page.getByRole('button', { name: /Adayı bağla/ }).first().click();

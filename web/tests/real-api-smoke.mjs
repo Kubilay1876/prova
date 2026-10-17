@@ -13,6 +13,9 @@ const errors = []; page.on('pageerror', e => errors.push(e.message));
 const checks = []; let run, reportBytes;
 async function check(name, action) { await action(); checks.push(name); console.log(`PASS ${name}`); }
 try {
+  // Chain reads are isolated here; this suite validates the real backend/ATK, not Fuji.
+  // Use a deliberate transport failure rather than any synthetic chain success.
+  await page.route('https://api.avax-test.network/**', route => route.abort('failed'));
   await page.goto(origin);
   await check('Real API enables scripted candidates with LLM NOT_CONFIGURED; five tests visibly unsupported', async () => {
     const health = await (await page.request.get(`${origin}/api/health`)).json();
@@ -67,7 +70,7 @@ try {
     await page.locator('input[type=file]').setInputFiles({ name: 'report.json', mimeType: 'application/json', buffer: reportBytes });
     await page.getByRole('button', { name: 'Dosyayı doğrula' }).click();
     await page.locator('.verification-result .tone-MATCH').waitFor();
-    assert.match(await page.locator('.verification-result').innerText(), /Zincir doğrulaması bekliyor/);
+    assert.match(await page.locator('.verification-result').innerText(), /Fuji RPC sorgusu tamamlanamadı/);
     assert.equal(await page.locator('.verification-result .tone-VERIFIED').count(), 0);
     await page.locator('input[type=file]').setInputFiles({ name: 'changed.json', mimeType: 'application/json', buffer: Buffer.concat([reportBytes, Buffer.from('\n')]) });
     await page.getByRole('button', { name: 'Dosyayı doğrula' }).click();
@@ -75,6 +78,7 @@ try {
   });
   await check('Standalone /verify performs no API requests and accepts a previously saved expected hash', async () => {
     const independent = await browser.newPage();
+    await independent.route('https://api.avax-test.network/**', route => route.abort('failed'));
     let calls = 0; independent.on('request', req => { if (new URL(req.url()).pathname.startsWith('/api/')) calls++; });
     await independent.goto(`${origin}/verify`);
     await independent.locator('#expected-hash').fill(run.reportHash.value);

@@ -3,6 +3,7 @@ import { liveApi, ApiError } from './api';
 import { fixtureApi } from './fixture';
 import { comparable, evidenceFor, isActive, mergeEvents } from './domain';
 import { compareDigest, verifyFile, type Verification } from './verify';
+import { chainManifest } from './chain-manifest';
 import type { Candidate, Finding, Health, Run, RunEvent, RunSummary, TestDefinition } from './types';
 
 type View = 'connect' | 'exam' | 'report' | 'verify';
@@ -278,15 +279,15 @@ function Verifier({ expectedHash, expectedRunId }: { expectedHash?: string; expe
     finally { if (id === request.current) setBusy(false); }
   }
   return <>
-    <section className="page-heading"><div><div className="eyebrow">BAĞIMSIZ / SALT OKUMA</div><h1>Karne değişmiş mi?</h1><p>Dosyanın tam baytlarını cihazında hash’le ve beklenen rapor hash’iyle karşılaştır. Backend bağlantısı gerekmez.</p></div><div className="heading-stamp"><span>PROVA / VERIFY</span><strong>◇</strong><small>İMZA GEREKMEZ</small></div></section>
+    <section className="page-heading"><div><div className="eyebrow">BAĞIMSIZ / SALT OKUMA</div><h1>Karne değişmiş mi?</h1><p>Dosyanın tam baytlarını cihazında hash’le ve beklenen rapor hash’iyle karşılaştır. Backend bağlantısı gerekmez; zincir kontrolü için Fuji RPC erişimi gerekir.</p></div><div className="heading-stamp"><span>PROVA / VERIFY</span><strong>◇</strong><small>İMZA GEREKMEZ</small></div></section>
     <div className="verify-grid"><section className="panel">
       <div className="section-top"><h2>Rapor dosyasını seç</h2><Badge>SHA-256</Badge></div>
       <label className="file-drop"><span>⇧</span><strong>{file?.name ?? 'Dondurulmuş JSON karneyi seç'}</strong><small>En fazla 15 MB · Dosya cihazında kalır</small><input type="file" accept=".json,application/json" disabled={busy} onChange={e => { setFile(e.target.files?.[0] ?? null); setResult(null); setComparison(null); setError(''); }}/></label>
       <p className="helper">Dosya parse edilip yeniden yazılmaz; indirilen baytlar doğrudan hash’lenir. Dosyadaki RPC, URL veya kontrat adresleri çağrılmaz.</p>
-      <label className="field-label expected-hash-label" htmlFor="expected-hash">Beklenen SHA-256 · run.reportHash.value</label>
-      <input id="expected-hash" className="wide-select hash-input" type="text" value={expected} spellCheck={false} autoComplete="off" disabled={busy} placeholder="Karnedeki 64 karakterli hash’i yapıştır" onChange={e => { setExpected(e.target.value); setResult(null); setComparison(null); }}/>
-      <p className="helper">{expectedRunId && expectedHash ? `Seçili koşunun backend bildirimi: ${expectedRunId}. Değer API’den alındı; zincir kanıtı değildir.` : 'Bağımsız kullanımda daha önce kaydettiğin run.reportHash.value değerini gir. Dosyanın içinden kendisine referans hash üretilmez.'}</p>
-      <button className="primary full" disabled={!file || busy} onClick={() => void verify()}>{busy ? 'Dosya inceleniyor…' : 'Dosyayı doğrula'}<span>→</span></button>
+      <label className="field-label expected-hash-label" htmlFor="expected-hash">Beklenen SHA-256 · isteğe bağlı</label>
+      <input id="expected-hash" className="wide-select hash-input" type="text" value={expected} spellCheck={false} autoComplete="off" disabled={busy} placeholder="64 karakterli referans hash · isteğe bağlı" onChange={e => { setExpected(e.target.value); setResult(null); setComparison(null); }}/>
+      <p className="helper">{expectedRunId && expectedHash ? `Seçili koşunun backend bildirimi: ${expectedRunId}. Değer API’den alındı; zincir kanıtı değildir.` : 'Yerel karşılaştırma için daha önce kaydettiğin run.reportHash.value değerini gir. Boş bırakırsan Fuji kaydı yine kontrol edilir.'}</p>
+      <button className="primary full" disabled={!file || busy} onClick={() => void verify()}>{busy ? 'Dosya ve Fuji kaydı inceleniyor…' : 'Dosyayı doğrula'}<span>→</span></button>
       {error && <div className="error-banner" role="alert">{error}</div>}
       {result && <div className="verification-result" role="status">
         <h3>Dosya bütünlüğü</h3>{comparison && <><Badge value={comparison.state}/><p>{comparison.message}</p></>}
@@ -294,10 +295,10 @@ function Verifier({ expectedHash, expectedRunId }: { expectedHash?: string; expe
         <h3 className="chain-result-title">Karne kaydı</h3><Badge value={result.state}/><p>{result.message}</p>
         {result.txHash && <a target="_blank" rel="noreferrer" href={`https://testnet.snowtrace.io/tx/${result.txHash}`}>Fuji işlemini aç ↗</a>}
       </div>}
-    </section><section className="panel verify-explainer"><div className="eyebrow">ŞU AN NE KONTROL EDİLİR?</div><h2>Dosya → SHA-256 → eşleşme</h2>
-      <ol><li><strong>Tam dosya baytları</strong><p>SHA-256 cihazında hesaplanır; dosya dışarı gönderilmez.</p></li><li><strong>Beklenen rapor hash’i</strong><p>run.reportHash.value ile eşleşme gösterilir. Boş veya geçersiz referans açıkça belirtilir.</p></li><li><strong>Zincir doğrulaması bekliyor</strong><p>Fuji manifesti ve olay ABI’si henüz yok. Yerel hash eşleşmesi zincir kaydı değildir.</p></li></ol>
+    </section><section className="panel verify-explainer"><div className="eyebrow">ŞU AN NE KONTROL EDİLİR?</div><h2>Dosya → SHA-256 → Fuji kaydı</h2>
+      <ol><li><strong>Tam dosya baytları</strong><p>SHA-256 cihazında hesaplanır; dosya dışarı gönderilmez.</p></li><li><strong>Beklenen rapor hash’i</strong><p>run.reportHash.value ile eşleşme gösterilir. Boş veya geçersiz referans açıkça belirtilir.</p></li><li><strong>Fuji olayı ve işlem makbuzu</strong><p>Hash’in kayıt bloğu bulunur; sabit kontrat, kayıtçı, aday sürümü ve paket özeti başarılı işlemdeki olayla karşılaştırılır.</p></li></ol>
       <div className="soft-note">Hash eşleşmesi, dosyanın referans alınan baytlarla aynı olduğunu gösterir. Adayın davranışının güvenli olduğunu veya sınav hükmünün doğruluğunu tek başına kanıtlamaz.</div>
-      <p className="helper">Şu anki karne kaydı: LOCAL_ONLY. receipt: null. Kontrat veya işlem makbuzu uydurulmaz.</p>
+      <dl className="verify-network"><div><dt>Ağ</dt><dd>Avalanche Fuji · test ağı · {chainManifest.chainId}</dd></div><div><dt>Sabit kontrat</dt><dd><code>{chainManifest.contractAddress}</code></dd></div><div><dt>İzinli kayıtçı</dt><dd><code>{chainManifest.recorderAddress}</code></dd></div></dl><p className="helper">Her dosyanın kaydı ayrıca kontrol edilir. Kayıt bulunamaması, RPC hatası ve bekleyen onay başarıya çevrilmez. Bu özel PROVA kayıt sözleşmesidir.</p>
     </section></div>
   </>;
 }
