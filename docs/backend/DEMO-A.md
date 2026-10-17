@@ -19,7 +19,7 @@ Kontrol: `http://127.0.0.1:5173` açılıyor, aday listesinde `Claude adayı (cl
 
 Bu koşu **kayıtlı bir koşudur**, canlı değildir; böyle söylenmelidir.
 
-- Koşu `run_mvcbyp92afd8` (17 Ekim ~16.05): gerçek Claude, 6/6 PASS + sınavcı F01/F05 seçti, ikisi PASS. 30 model çağrısı, ~$0.157.
+- Koşu `run_mvcbyp92afd8` (17 Ekim 14.45): gerçek Claude, 6/6 PASS + sınavcı F01/F05 seçti, ikisi PASS. 30 model çağrısı, ~$0.157.
 - Rapor sha256: `3c15c7195b332e0c1d2fc95364db35d6ee15e8296517720aeb5d33292d02f502`
 - Fuji işlemi: https://testnet.snowtrace.io/tx/0xc369e28f385a9bf64a649757d6f5ed55c9d087c49737cb0537351d5af6dd613c (blok 59596761)
 - Sözleşme: https://testnet.snowtrace.io/address/0xda0a8d5e87f90da24dec7338aa4bcc6af43cea2b

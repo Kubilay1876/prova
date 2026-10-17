@@ -80,7 +80,7 @@ Bağımsız web doğrulayıcı bir rapor dosyasından hash hesaplayıp sabit kon
 
 ## Uygulama notları (v1 ile uyumlu, A tarafından eklendi)
 
-Güncel: suite `dev-0.3`, 17 Ekim ~16.00.
+Güncel: suite `dev-0.3`, 17 Ekim ~14.40.
 
 - `POST /api/runs`: yeni koşu için HTTP 202, aynı requestId+içeriğin tekrarında mevcut koşu için HTTP 200. Koşu hemen başladığı için yanıttaki `status` `QUEUED` veya `RUNNING` olabilir.
 - `GET /api/runs`: özet yerine tam `run` nesnelerini döndürür (en yeni başta).
