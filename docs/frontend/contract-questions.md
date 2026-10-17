@@ -1,26 +1,27 @@
 # A'ya entegrasyon notları
 
-Backend referansı 54ac467, API v1 Uygulama notları okundu. A dosyaları değiştirilmedi.
+Backend referansı `b2219dc`, suite dev-0.3. B yalnız web/ ve docs/frontend/ değiştirir.
 
-## Açık — B-01: OneDrive persist rename EPERM
+## Kapanan — B-01: OneDrive persist rename EPERM
 
-Bu checkout'ta standart server/npm run dev açılıyor ve atkExam VERIFIED oluyor. İlk POST /api/runs sonrasında persist, `.run.json.tmp` dosyasını `.run.json` üzerine yeniden adlandırırken EPERM veriyor. Örnek yerel koşu: run_mvc83o18ap9x. Sonuç ERROR/INCONCLUSIVE, bütün bekleyen testler ERROR. Aynı backend'in api:smoke paketi OS temp dataDir ile geçiyor.
+A'nın atomicWriteSync düzeltmesi bu bilgisayarda standart `npm run dev` ve OneDrive içindeki normal data/ yolu ile tekrar denendi. 9 gerçek API/ATK tarayıcı kontrolü geçti; betik koşularında önceki EPERM tekrarlanmadı. Geçici serve-backend.ts başlatıcısı bu kontrol için kullanılmadı. Bu, bütün Windows dosya kilidi ihtimallerinin test edildiği anlamına gelmez.
 
-B geçici test başlatıcısı web/tests/serve-backend.ts, mevcut startApp API'sine yalnız dataDir=mkdtemp(tmpdir) vererek gerçek UI entegrasyonunu tamamladı. Yeni endpoint veya backend yazılmadı. A, kalıcı veri yolunu OneDrive dışında yapılandırmayı veya Windows atomik yazma davranışını değerlendirebilir. B bunun için server/ kaynağını değiştirmedi.
+## A düzeltmesi geldi — B-02: Hata metninde yerel yol
 
-## Açık — B-02: Altyapı hatasında yerel yol görünmesi
-
-Yukarıdaki hata RUN_STATUS summary ve rapor limitations içinde tam yerel dosya yolunu gösterdi. Kullanıcıya güvenli hata metni dönme hedefi açısından A event/report hata sanitizasyonunu da değerlendirmeli. B olay kanıtını yeniden yazıp gizlemedi; React metin olarak gösteriyor.
+A safeMessage maskelemesini ekledi. Kaynak okundu; bu B oturumunda kasıtlı altyapı arızasıyla tekrar test edilmedi. Önceki hata içeren kayıtların geriye dönük değişmediği biliniyor.
 
 ## Açık — B-03: Fuji manifesti
 
-Şu an credentialStatus LOCAL_ONLY ve receipt null. chain-manifest.ts null tutuldu. Salt okuma zincir adaptörünü etkinleştirmek için sabit chainId=43113, contractAddress, recorderAddress, deploymentBlock, izinli HTTPS rpcUrl, abiVersion, tam ABI ve eventName gerekli. Manifest gelmeden zincir doğrulanmış sonucu yok.
+Manifest henüz yok. chain-manifest.ts null. Gerekli public alanlar: chainId=43113, contractAddress, recorderAddress, deploymentBlock, izinli HTTPS rpcUrl, abiVersion, tam ABI ve eventName. Karne hükmü ve kayıt durumu ayrıdır.
 
-## Kapanan sorular
+## Açık — B-04: Belgelerde eski kapsam
 
-- GET /api/runs tam run nesneleri döndürüyor: desteklendi.
-- Scripted adaylar llm NOT_CONFIGURED iken çalışıyor: frontend LLM engeli kaldırıldı; atkExam hazırlığı kullanılıyor.
-- Rapor envelope'u candidate.versionHash ve evidence.events: gerçek indirme ile doğrulandı.
-- reportHash.value dondurulmuş ham baytların SHA-256'sı: gerçek dosya ile eşleşti. Rapora kendi hash'i eklenmedi.
-- T03 PASS, diğerleri UNSUPPORTED iken PARTIAL/INCONCLUSIVE: gerçek arayüz akışında doğrulandı.
-- docs/backend/STATUS.md sonundaki eski “endpoint'ler henüz yok” cümlesi önceki bölümlerle çelişiyor; çalışan HTTP API bu oturumda doğrulandı. A belgeyi güncelleyebilir; B değiştirmedi.
+README ve docs/API.md Uygulama notları hâlâ yalnız T03/betik aday diyor. STATUS.md içindeki eski “henüz yapılmadı/engelli” maddeleri yeni altı test/Claude/sınavcı doğrulamalarıyla çelişiyor. B, güncel çalıştırılabilir API ve A'nın yeni STATUS maddelerini esas aldı; A belgelerini değiştirmedi. Gerçek güncel suiteVersion dev-0.3.
+
+## Takip testi entegrasyonu
+
+run.followUps opsiyonel olarak destekleniyor: testId, baseTestId, title, examinerReason, testStatus, reason, evidenceEventIds. Altı zorunludan ayrı görünür; counts ve verdict yeniden hesaplanmaz. Sınavcı seçimi/hatası testId=null EXAMINER_DECISION olayından okunur. Sınavcı hatasının ardından backend genel PASS verirse frontend bunu değiştirmez ama hatayı görünür tutar.
+
+GET /api/candidates henüz kind/model alanlarını göndermiyor; label bunları içeriyor. B, health durumundan aday türü çıkarmıyor. supportedTestIds takip kimliklerini de içerdiği için zorunlu kapsam yalnız T01–T06 kesişimiyle gösterilir.
+
+Fuji kaydı sınav bitiminden sonra asenkron gelebilir. API sözleşmesine göre terminal koşuda otomatik polling durur. PENDING kayıt için kullanıcıya koşuyu yeniden açması söylenir; kayıt tamamlandı iddiası yapılmaz.

@@ -1941,3 +1941,11 @@ td button {
   border-color:#cfe7d9;
   color:#387258
 }
+
+.followups-panel { margin: 20px 0; min-width: 0; }
+.followups-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.followup-card { padding: 20px; border: 1px solid var(--line, #dce5e5); border-radius: 12px; min-width: 0; overflow-wrap: anywhere; }
+.followup-card h3 { margin: 8px 0 18px; }
+.followup-card p, .followups-panel .soft-note p, .followups-panel .warning-banner p { margin: 8px 0 16px; overflow-wrap: anywhere; }
+.followup-card .section-top { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 700px) { .followups-grid { grid-template-columns: 1fr; } }

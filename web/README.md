@@ -49,6 +49,8 @@ Gerçek entegrasyon durumu ve A’ya sorular: `../docs/frontend/STATUS.md`, `HAN
 
 `tests/real-api-smoke.mjs` çalışan frontend + A backend'i üzerinde 9 gerçek entegrasyon senaryosu içerir. Aynı Playwright index.mjs yolunu ilk argüman alır. Betik adaylar/sentetik piyasa/sanal emir/yerel karne sınırını korur; gerçek LLM veya Fuji kanıtı değildir.
 
-Bu OneDrive ortamında standart backend data/ atomic rename işlemi EPERM verdi. A'nın kaynakları değiştirilmeden server/ terminalinde `npm exec -- tsx ../web/tests/serve-backend.ts` ile aynı startApp fonksiyonunun geçici dataDir seçeneği kullanılarak test edildi. Önce standart backend kapatılmalı. Ayrıntı docs/frontend/contract-questions.md'de.
+Güncel b2219dc backend ile standart `npm run dev` ve OneDrive içindeki normal data/ yolunda 9 gerçek kontrol geçti; önceki EPERM tekrarlanmadı. Geçici veri başlatıcısı izolasyon amacıyla tutuldu.
+
+`tests/followups-smoke.mjs` 7 ek arayüz kontrolü içerir: Claude kapsamı, takip gerekçesi/kanıtı, kritik takipte genel FAIL, iptal, boş/eski kayıt ve mobil görünüm. Açık HTTP test yanıtları kullanır; gerçek model çağrısı yapmaz.
 
 Bağımsız /verify backend'e istek atmaz. Beklenen run.reportHash.value elle girilir veya seçili karneden aktarılır. Aynı tam dosya baytları ile karşılaştırma, zincir kaydından ayrı gösterilir. Fuji manifesti yokken zincir doğrulaması bekliyor kalır.
