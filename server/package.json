@@ -1,0 +1,28 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "llm:check": "tsx src/llm/check.ts",
+    "smoke:atk": "tsx src/smoke/mcp-redirect.ts",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx src/index.ts",
+    "api:smoke": "tsx src/scripts/api-smoke.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "openai": "^7.36.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
