@@ -1,4 +1,4 @@
-// Hard spend guard for every model call. The whole project must stay under USD 1.
+// Hard spend guard for every model call. The whole project's API spend is capped (default USD 3).
 // Cumulative estimated spend is persisted; once the cap is reached, calls are refused.
 // Prices are USD per 1M tokens from the Claude API model table (cached 2026-10-06); an
 // unknown model is refused instead of guessed, so an expensive model cannot slip in.
@@ -45,7 +45,7 @@ const priceOf = (model: string, promptTokens: number): { in: number; out: number
 export class Budget {
   constructor(
     private file = "data/spend.json",
-    readonly capUsd = Number(process.env.PROVA_BUDGET_USD ?? "0.80"),
+    readonly capUsd = Number(process.env.PROVA_BUDGET_USD ?? "3.00"),
   ) {
     if (!Number.isFinite(capUsd) || capUsd <= 0) throw new Error("PROVA_BUDGET_USD must be a positive number");
   }

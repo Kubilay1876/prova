@@ -1,5 +1,5 @@
 // Verifies the Anthropic key in server/.env with one tiny real call. Never prints the key.
-// The call goes through the spend guard (whole project budget: under USD 1).
+// The call goes through the spend guard (whole project API budget, default cap USD 3).
 import { existsSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { Budget, BudgetExceeded } from "./budget.js";
@@ -10,7 +10,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-const model = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
+const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 const budget = new Budget();
 const client = new Anthropic();
 try {
