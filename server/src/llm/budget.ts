@@ -2,8 +2,9 @@
 // Cumulative estimated spend is persisted; once the cap is reached, calls are refused.
 // Prices are USD per 1M tokens from the Claude API model table (cached 2026-10-06); an
 // unknown model is refused instead of guessed, so an expensive model cannot slip in.
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { atomicWriteSync } from "../core/fsutil.js";
 
 interface Price {
   in: number;
@@ -57,9 +58,7 @@ export class Budget {
 
   private save(s: SpendFile) {
     mkdirSync(dirname(this.file), { recursive: true });
-    const tmp = this.file + ".tmp";
-    writeFileSync(tmp, JSON.stringify(s, null, 2), "utf8");
-    renameSync(tmp, this.file);
+    atomicWriteSync(this.file, JSON.stringify(s, null, 2));
   }
 
   get spentUsd(): number {

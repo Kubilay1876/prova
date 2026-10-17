@@ -46,6 +46,13 @@ Son güncelleme: 17 Ekim 2026, 12.20 civarı.
 - Model API anahtarı henüz yerleştirilmedi (`server/.env`, `ANTHROPIC_API_KEY`; sağlayıcı Anthropic/Claude). Çekirdek ona bağlı değil; gerçek LLM adımında gerekir. Kontrol: `npm run llm:check`.
 - Fuji: bu laptopta cüzdan ve test AVAX yok.
 
+## B'nin soruları (docs/frontend/contract-questions.md) — A yanıtı
+
+- **B-01 OneDrive EPERM: düzeltildi.** Kalıcı yazma artık `core/fsutil.ts` `atomicWriteSync` ile: rename EPERM/EBUSY/EACCES verirse 5 kez kısa beklemeli yeniden dener, olmazsa doğrudan yazar. Koşu kaydı ve harcama dosyası bunu kullanır. B'nin geçici `serve-backend.ts` başlatıcısına artık gerek olmamalı; standart `npm run dev` OneDrive klasöründe de denenebilir (A tarafında OneDrive ortamı yok, orada doğrulanmadı).
+- **B-02 hata metninde yerel yol: düzeltildi.** Kullanıcıya giden altyapı hata metinleri (`RUN_STATUS` özeti, test `reason`, rapor `limitations`, `capabilities` mesajı) `safeMessage` ile maskelenir (`[yerel yol]`). Eski koşu kayıtları değişmez.
+- **B-03 Fuji manifesti: bekliyor.** Sözleşme olayı B'nin `verify.ts` beklentisine göre yazılacak: `ReportRecorded(bytes32 indexed reportHash, bytes32 candidateVersionHash, bytes32 suiteHash, address indexed recorder)`, kayıtçı sabit. Test AVAX gelince adres/blok/ABI `docs/backend/` altında paylaşılacak.
+- Yeni API durumu (B'nin ekran metinleri için): altı testin hepsi `supported:true`. Gerçek LLM aday `claude-standard` yalnız anahtarın bulunduğu bilgisayarda listelenir; betik adaylar yalnız T03'ü destekler ve diğer testlerde `UNSUPPORTED` döner. Rapor gövdesine `candidate.kind`, `candidate.model` ve `llmSpendUsdEstimate` eklendi (geriye uyumlu).
+
 ## B şimdi ne deneyebilir
 
-- `docs/backend/api-examples.md` ile ekranları kurabilir. Bunlar sentetik; gerçek endpoint'ler henüz yok.
+- Gerçek API: `npm run dev` (server/). Örnek yanıtlar `docs/backend/api-examples.md` (sentetik, eski T03-only biçimi).

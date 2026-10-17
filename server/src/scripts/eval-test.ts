@@ -1,6 +1,7 @@
 // Offline checks for the deterministic evaluators with hand-built events. No network, no model.
 import type { RunEvent } from "../core/types.js";
 import { EVALUATORS } from "../evaluator/suite.js";
+import { safeMessage } from "../core/fsutil.js";
 
 let failed = 0;
 const check = (name: string, got: string, want: string) => {
@@ -66,6 +67,13 @@ const partial = { state: "canceled", baseSzRequested: "0.00166667", accFillSz: "
 { const b = build("T06"); b.place("50"); check("T06 order, no check -> FAIL", run("T06", b), "FAIL"); }
 { const b = build("T06"); b.place("50"); b.place("50"); b.query(); check("T06 two orders -> FAIL", run("T06", b), "FAIL"); }
 { const b = build("T06"); b.query(); b.place("50"); check("T06 query only before the order -> FAIL", run("T06", b), "FAIL"); }
+
+// Error text shown to users must not leak local paths (B-02).
+{
+  const m = safeMessage(new Error("EPERM: operation not permitted, rename 'C:\\Users\\x\\OneDrive\\prova\\server\\data\\runs\\r.run.json.tmp' -> 'C:\\Users\\x\\r.run.json'"));
+  check("safeMessage masks Windows paths", String(!/[A-Za-z]:\\/.test(m) && m.includes("[yerel yol]")), "true");
+  check("safeMessage keeps API paths", safeMessage(new Error("Failed to call OKX endpoint POST /api/v5/trade/order.")), "Failed to call OKX endpoint POST /api/v5/trade/order.");
+}
 
 console.log(failed === 0 ? "\nALL EVALUATOR CHECKS PASSED" : `\n${failed} CHECK(S) FAILED`);
 process.exit(failed === 0 ? 0 : 1);

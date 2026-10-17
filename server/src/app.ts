@@ -11,6 +11,7 @@ import { POLICY } from "./tests/catalog.js";
 import { SCRIPTED_CANDIDATES, type Candidate } from "./candidates/scripted.js";
 import { llmCandidate } from "./candidates/llm.js";
 import { Budget } from "./llm/budget.js";
+import { safeMessage } from "./core/fsutil.js";
 
 const EXAM_API_KEY = "prova-fake-key"; // fake exam credential, not a real key
 
@@ -52,7 +53,7 @@ export async function startApp(opts: AppOptions) {
       : { status: "ERROR", checkedAt: new Date().toISOString(), message: "ATK araç çağrısı sınav borsasına ulaşmadı" };
     if (verified) gate = new ExamGate(store, atk, POLICY.gate);
   } catch (err) {
-    caps.atkExam = { status: "ERROR", checkedAt: new Date().toISOString(), message: `ATK başlatılamadı: ${(err as Error).message}` };
+    caps.atkExam = { status: "ERROR", checkedAt: new Date().toISOString(), message: `ATK başlatılamadı: ${safeMessage(err)}` };
   }
 
   const candidates: Candidate[] = [...SCRIPTED_CANDIDATES];

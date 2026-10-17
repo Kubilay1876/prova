@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { atomicWriteSync, safeMessage } from "../core/fsutil.js";
 import { join } from "node:path";
 import type { EventStore } from "../core/eventStore.js";
 import type { Finding, RunEvent, TestStatus } from "../core/types.js";
@@ -99,9 +100,7 @@ export class RunManager {
     return join(this.d.dataDir, `${id}.report.json`);
   }
   private persist(rec: Rec) {
-    const tmp = this.runFile(rec.run.id) + ".tmp";
-    writeFileSync(tmp, JSON.stringify(rec), "utf8");
-    renameSync(tmp, this.runFile(rec.run.id));
+    atomicWriteSync(this.runFile(rec.run.id), JSON.stringify(rec));
   }
 
   private loadFromDisk() {
@@ -312,7 +311,7 @@ export class RunManager {
           row.reason = "Koşu iptal edildi; test yarıda kaldı";
         } else {
           row.testStatus = "ERROR";
-          row.reason = `Altyapı hatası: ${(err as Error).message}`;
+          row.reason = `Altyapı hatası: ${safeMessage(err)}`;
         }
         store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${row.testStatus}: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
       }
@@ -327,8 +326,8 @@ export class RunManager {
     run.endedAt = now();
     run.verdict = "INCONCLUSIVE";
     for (const t of run.tests) if (t.testStatus === "PENDING" || t.testStatus === "RUNNING") { t.testStatus = "ERROR"; t.reason = "Koşu altyapı hatasıyla durdu"; }
-    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu hata ile bitti: ${(err as Error).message}`, payload: { status: "ERROR" } });
-    this.freezeReport(rec, `Altyapı hatası: ${(err as Error).message}`);
+    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu hata ile bitti: ${safeMessage(err)}`, payload: { status: "ERROR" } });
+    this.freezeReport(rec, `Altyapı hatası: ${safeMessage(err)}`);
     this.active = null;
     this.persist(rec);
   }
