@@ -14,9 +14,9 @@ A safeMessage maskelemesini ekledi. Kaynak okundu; bu B oturumunda kasıtlı alt
 
 31804ce ile manifest geldi: chainId=43113, kontrat 0xda0a8d5e87f90da24dec7338aa4bcc6af43cea2b, yükleme bloğu 59596297. Tam public manifest web/src/chain-manifest.ts içine incelenerek kopyalandı. recordedAt(hash) yalnız kayıt bloğunu bulmak için kullanılır; asıl doğrulama olay ve başarılı makbuz eşleşmesidir. Karne hükmü ve kayıt durumu ayrıdır.
 
-## Açık — B-04: Belgelerde eski kapsam
+## Kapanan — B-04: Belgelerde eski kapsam
 
-README ve docs/API.md Uygulama notları hâlâ yalnız T03/betik aday diyor. STATUS.md içindeki eski “henüz yapılmadı/engelli” maddeleri yeni altı test/Claude/sınavcı doğrulamalarıyla çelişiyor. B, güncel çalıştırılabilir API ve A'nın yeni STATUS maddelerini esas aldı; A belgelerini değiştirmedi. Gerçek güncel suiteVersion dev-0.3.
+A güncel main'de README/API/STATUS belgelerini yeniledi. PRODUCT.md ile DEMO-A.md karşılaştırıldı. Küçük akış farkı: B, betik adayda bile altı test kimliği gönderiyor; yalnız T03 çalışıyor ve diğer beş test UNSUPPORTED kalıyor. Sunum notu düzeltildi; test seçimi için yeni özellik eklenmedi.
 
 ## Takip testi entegrasyonu
 
@@ -29,3 +29,7 @@ Fuji kaydı sınav bitiminden sonra asenkron gelebilir. API sözleşmesine göre
 ## Açık — B-05: Public Fuji RPC erişimi
 
 Bu bilgisayardaki salt okuma denemesi ilk eth_chainId çağrısında HTTP 429 / Cloudflare 1015 verdi. Başka hedefe otomatik geçiş veya doğrulandı iddiası yok. Sayfa bu durumu hata olarak gösteriyor. A'nın gerçek kayıtlı rapor baytları bu bilgisayarda yok; pozitif dosya/olay/makbuz yolu izole sentetik RPC ile test edildi. Gerçek ağda tekrar çalıştırma için web/tests/fuji-read-smoke.mjs hazır.
+
+### B-05 güncellemesi
+
+A bilgisayarında gerçek public okuma ve zincir kayıtlı demo dosyası doğrulaması geçti. B'nin 429 gözlemi farklı bilgisayardaki erişim sorunudur. İstek başına kontrolsüz retry yerine doğrulama başına tek ek istek bütçesiyle 1.500 ms gecikmeli 429 tekrarı eklendi. Kalıcı ağ hatası yine hata gösterir. Tek blok sorgulama zaten 11d7a41'de bulunuyordu; deploymentBlock'tan tarama yok.

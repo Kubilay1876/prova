@@ -13,11 +13,15 @@ const stub = rpcStub(manifest, { digest, candidateVersionHash: `0x${report.candi
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
 const checks = [], errors = [], apiCalls = [], external = [];
+const rpcMethods = [];
+let transient429 = false;
 page.on('pageerror', e => errors.push(e.message));
 page.on('request', req => { if (new URL(req.url()).pathname.startsWith('/api/')) apiCalls.push(req.url()); if (!req.url().startsWith('http://127.0.0.1:5173')) external.push(req.url()); });
 await page.route('https://api.avax-test.network/**', async route => {
-  if (stub.state.rpcError) return route.fulfill({ status: 429, body: 'Synthetic rate limit' });
   const req = route.request().postDataJSON();
+  rpcMethods.push({ method: req.method, time: Date.now() });
+  if (stub.state.rpcError) return route.fulfill({ status: 429, body: 'Synthetic rate limit' });
+  if (transient429 && req.method === 'eth_getLogs') { transient429 = false; return route.fulfill({ status: 429, body: 'Synthetic temporary rate limit' }); }
   return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ jsonrpc: '2.0', id: req.id, result: await stub.request(req) }) });
 });
 async function verify(buffer = bytes) {
@@ -41,6 +45,17 @@ try {
     const logQuery = stub.state.calls.find(c => c.method === 'eth_getLogs').params[0];
     assert.equal(logQuery.fromBlock, logQuery.toBlock);
     await page.screenshot({ path: 'artifacts/chain-verify-1440.png', fullPage: true });
+  });
+  await check('One transient 429 retries only the failed log request after a delay and recovers', async () => {
+    const before = rpcMethods.length;
+    transient429 = true;
+    await verify();
+    assert.equal(await page.locator('.verification-result .tone-VERIFIED').count(), 1);
+    const current = rpcMethods.slice(before);
+    assert.equal(current.filter(call => call.method === 'eth_chainId').length, 1);
+    const logs = current.filter(call => call.method === 'eth_getLogs');
+    assert.equal(logs.length, 2);
+    assert.ok(logs[1].time - logs[0].time >= 1400);
   });
   await check('One added newline changes local hash and returns no matching registered record', async () => {
     await verify(Buffer.concat([bytes, Buffer.from('\n')]));

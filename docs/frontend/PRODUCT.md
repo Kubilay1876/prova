@@ -1,10 +1,14 @@
 # PROVA — iki dakikalık sunum ve jüri hazırlığı
 
-Güncel kapsam: backend 31804ce, suite dev-0.3. Claude ve sınavcıya ilişkin gerçek koşu kanıtı A'nın docs/backend/STATUS.md kaydıdır. B, ücretli çağrıyı tekrarlamadı; ekranları ve ücretsiz gerçek ATK/betik akışını doğruladı.
+Güncel kapsam: backend a0ed0ff, suite dev-0.3. Claude ve sınavcıya ilişkin gerçek koşu kanıtı A'nın docs/backend/STATUS.md kaydıdır. B, ücretli çağrıyı tekrarlamadı; ekranları ve ücretsiz gerçek ATK/betik akışını doğruladı.
 
 ## Demo hazırlığı
 
-Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API listesinde bulunmalı. Süreyi korumak için önceden tamamlanmış gerçek Claude koşusunu geçmişten açın; yoksa gerçek betik T03 akışını gösterip kapsamı söyleyin. UI DEMO verisini gerçek Claude koşusu diye sunmayın. Zincire kaydedilmiş bir rapor dosyasını doğrulayıcıya verin; eski LLM koşuları yerel kalmış olabilir. RPC erişimini sunumdan önce kontrol edin.
+Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API listesinde bulunmalı. Süreyi korumak için önceden tamamlanmış gerçek Claude koşusunu geçmişten açın; yoksa gerçek betik T03 akışını gösterip kapsamı söyleyin. UI DEMO verisini gerçek Claude koşusu diye sunmayın. Zincire kaydedilmiş bir rapor dosyasını doğrulayıcıya verin; eski LLM koşuları yerel kalmış olabilir. RPC erişimini sunumdan önce kontrol edin. Demo A'nın bilgisayarında yapılacak. 17.00 sonrası yalnız hata düzeltme; yeni özellik yok.
+
+DEMO-A.md ile ortak hazır kanıt: `run_mvcbyp92afd8`, gerçek Claude 6/6 + F01/F05, Fuji kayıtlı. SHA-256: `3c15c7195b332e0c1d2fc95364db35d6ee15e8296517720aeb5d33292d02f502`. Bu kayıtlı koşudur, canlı çalışıyormuş gibi anlatılmaz.
+
+Akış notu: B ekranı altı zorunlu kimliği birlikte gönderir. Betik aday seçildiğinde T03 çalışır, diğer beşi UNSUPPORTED görünür; genel yürütme PARTIAL olabilir. “Yalnız T03 seçtik” denmemeli. DEMO-A.md'deki “+ T03” adımını bu sınırla anlatın. İşlem explorer bağlantısı bağımsız doğrulama sonucunda da açılır.
 
 ## İki dakikalık konuşma
 
@@ -30,7 +34,7 @@ Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API lis
 
 ## Jüri soruları
 
-**Gerçek LLM çalıştı mı?** A'nın kayıtlarına göre Claude ile altı test ve ardından F01/F05 takipleri PASS aldı. B'nin bu güncellemesindeki model/sınavcı ekran kontrolleri sentetik HTTP yanıtlarıyla yapıldı; gerçek LLM çalıştırma kanıtı bunlar değildir.
+**Gerçek LLM çalıştı mı?** A'nın kayıtlarına göre Claude ile altı test ve ardından F01/F05 takipleri PASS aldı. A ayrıca gerçek Claude demo raporunu B'nin verify.ts koduyla VERIFIED, tek kelimesi değişen dosyayı NOT_FOUND olarak doğruladı. B'nin yerel sentetik testleri bu gerçek koşunun kanıtı yerine kullanılmaz.
 
 **Agentic design nerede?** Aday gerçek araç şemalarıyla karar verir; ayrı bağlamdaki sınavcı sonuçlara göre en fazla iki katalog testi seçer ve gerekçe yazar. Kod seçimi sınırlar ve hükmü verir. Sınavcı serbestçe yeni test kodu üretmez.
 
@@ -42,7 +46,7 @@ Anahtarın bulunduğu bilgisayarda iki uygulamayı açın. Claude adayı API lis
 
 **OKX tarafında gerçek olan?** okx-trade-mcp süreci ve araç çağrıları. Hedef yerel sınav borsası; gerçek piyasada emir verilmez. PROVA'nın report_result bildirim aracı ATK aracı değildir.
 
-**Avalanche hazır mı?** A sözleşmenin Fuji'ye yüklendiğini ve bir betik koşusunun kaydını doğruladığını bildiriyor. B manifesti sayfaya bağladı. Bu bilgisayardaki gerçek RPC denemesi 429 hız sınırına takıldı; sayfa bu durumda hata gösterir. Dosya hash eşleşmesi zincir makbuzu yerine geçmez.
+**Avalanche hazır mı?** A bilgisayarında hem public Fuji okuma testi hem zincire kayıtlı gerçek Claude demo dosyasının verify.ts doğrulaması geçti; tek kelimelik değişiklik NOT_FOUND döndürdü. B bilgisayarındaki önceki deneme 429 hız sınırına takılmıştı. Sayfa 429 alan isteği 1,5 saniye sonra bir kez tekrarlar; doğrulama başına en fazla bir ek istek vardır. Devam eden ağ hatası başarı sayılmaz. Dosya hash eşleşmesi tek başına zincir makbuzu değildir.
 
 **Maliyet kontrolü?** A'nın kodunda varsayılan 3 USD harcama sigortası, model çağrı sınırı ve maliyet takibi var. Ortak 100 USD'nin tamamı bizim değil. A'nın tek koşu tahmini gelecekteki fiyat veya garanti değildir; B bu oturumda ücretli model çağrısı yapmadı.
 
