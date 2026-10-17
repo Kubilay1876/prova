@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
     "api:smoke": "tsx src/scripts/api-smoke.ts",
-    "budget:test": "tsx src/scripts/budget-test.ts"
+    "budget:test": "tsx src/scripts/budget-test.ts",
+    "llm:t03": "tsx src/scripts/llm-t03.ts"
   },
   "keywords": [],
   "author": "",

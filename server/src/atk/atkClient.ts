@@ -16,8 +16,16 @@ export interface ToolCaller {
   callTool(name: string, args: Record<string, unknown>): Promise<ToolResult>;
 }
 
+export interface AtkToolDef {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
 export interface ExamAtk extends ToolCaller {
   toolNames: string[];
+  /** Real tool definitions as the MCP server announced them (listTools). */
+  tools: AtkToolDef[];
   serverVersion: string | undefined;
   stderrLog: string[];
   close(): Promise<void>;
@@ -62,6 +70,7 @@ export async function startExamAtk(opts: {
 
   return {
     toolNames: tools.map((t) => t.name),
+    tools: tools.map((t) => ({ name: t.name, description: t.description ?? "", inputSchema: t.inputSchema as Record<string, unknown> })),
     serverVersion: client.getServerVersion()?.version,
     stderrLog,
     callTool: async (name, args) => (await client.callTool({ name, arguments: args })) as unknown as ToolResult,

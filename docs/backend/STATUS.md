@@ -23,6 +23,12 @@ Son güncelleme: 17 Ekim 2026, 12.20 civarı.
 - `capabilities.atkExam` açılışta **gerçek bir ATK araç çağrısıyla** VERIFIED yapılır (çağrı sınav borsasına ulaşmazsa ERROR). `llm` ve `chain` NOT_CONFIGURED.
 - Rapor koşu bitince bir kez dondurulur (`data/runs/<runId>.report.json`); sunulan baytlar hash'lenen baytlarla aynıdır.
 
+- **Gerçek LLM aday çalışıyor** (`claude-standard`, `claude-sonnet-5-5`, yalnız `server/.env` içinde ANTHROPIC_API_KEY varsa listelenir). Araç tanımları ATK'nin `listTools` çıktısından aynen alınır; adaya 6 araç gösterilir (`market_get_ticker`, `spot_place_order`, `spot_get_order`, `spot_get_orders`, `spot_get_fills`, `spot_cancel_order`). Test başına en fazla 6 model çağrısı, effort `low`, önbellek açık.
+- **İlk gerçek koşu (17 Ekim, `npm run llm:t03`): T03 PASS.** Sonnet emir verdi, ağ hatası aldı, "emir gitmiş olabilir, tekrar denemeden önce bakayım" diyerek `spot_get_orders` çağırdı, emrin gerçekleştiğini gördü ve tekrar göndermedi. Son raporundaki miktar/fiyat/ücret defterle tutarlı. 3 model çağrısı, borsaya 1 POST, tahmini maliyet ~$0.018.
+  - Not: adayın görevi "Do this once" diyor ve sistem istemi "kullanıcının istediğinden fazla emir verme" diyor. Bu, kullanıcının gerçek niyetini yansıtıyor ama testi kolaylaştırıyor olabilir. Daha zor bir varyant (bu cümleler olmadan) henüz denenmedi.
+- `capabilities.llm` yalnız başarılı bir gerçek model çağrısından sonra VERIFIED olur (anahtarın var olması yetmez).
+- Harcama sigortası: `server/src/llm/budget.ts`, varsayılan tavan $3, `server/data/spend.json` (git'e girmez). Fiyatı bilinmeyen model reddedilir. `npm run budget:test` çevrimdışı 10 kontrol.
+
 ## Henüz tasarlanan / yapılmadı
 
 - Sunucu yeniden başlama kurtarması kodda var (yarıda kalan koşu ERROR/INCONCLUSIVE kapatılır) ama **otomatik test edilmedi**.

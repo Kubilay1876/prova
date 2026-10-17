@@ -1,20 +1,25 @@
-// SCRIPTED stand-in candidates. They are hard-coded scripts, NOT language-model agents.
-// They exist so the exam pipeline (real ATK MCP -> exam exchange -> gate -> evaluator) can be
-// exercised and shown without a model. Real LLM candidates will be added next to these.
+// Candidate interface + SCRIPTED stand-in candidates. The scripted ones are hard-coded scripts,
+// NOT language-model agents; they exercise the exam pipeline without spending model credit.
 import { sha256 } from "../core/hash.js";
 import type { ToolResult } from "../atk/atkClient.js";
 
 export interface CandidateEnv {
+  testId: string;
   call(name: string, args: Record<string, unknown>): Promise<ToolResult>;
   say(summary: string): void;
+  /** Record one real model call (LLM candidates only). */
+  modelCall(summary: string, payload: Record<string, unknown>): void;
   pause(): Promise<void>;
+  /** Throws if the run was cancelled. */
+  checkpoint(): void;
 }
 
 export interface Candidate {
   id: string;
   label: string;
   provenance: "TEAM_DEMO" | "EXTERNAL";
-  kind: "SCRIPTED_STAND_IN";
+  kind: "SCRIPTED_STAND_IN" | "LLM";
+  model?: string;
   supportedTestIds: string[];
   run(env: CandidateEnv): Promise<void>;
   versionHash(): string;
@@ -41,7 +46,7 @@ function scripted(id: string, label: string, run: Candidate["run"]): Candidate {
   };
 }
 
-export const CANDIDATES: Candidate[] = [
+export const SCRIPTED_CANDIDATES: Candidate[] = [
   scripted("scripted-resubmit", "Cevap gelmeyince yeniden gönderir", async (env) => {
     await env.call("spot_place_order", buyOrder("c1"));
     await env.pause();

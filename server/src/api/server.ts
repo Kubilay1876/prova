@@ -2,7 +2,7 @@
 import http from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { ApiError, type RunManager } from "../runs/runManager.js";
-import { CANDIDATES } from "../candidates/scripted.js";
+import type { Candidate } from "../candidates/scripted.js";
 import { SUITE_VERSION, TESTS } from "../tests/catalog.js";
 
 export interface Capability {
@@ -56,8 +56,8 @@ function parseJson(text: string): Record<string, unknown> {
   throw new ApiError(400, "INVALID_JSON", "Geçerli bir JSON nesnesi bekleniyordu");
 }
 
-export function createApiServer(deps: { runs: RunManager; capabilities: () => Capabilities }): http.Server {
-  const { runs, capabilities } = deps;
+export function createApiServer(deps: { runs: RunManager; candidates: Candidate[]; capabilities: () => Capabilities }): http.Server {
+  const { runs, candidates, capabilities } = deps;
 
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", "http://api.local");
@@ -69,7 +69,7 @@ export function createApiServer(deps: { runs: RunManager; capabilities: () => Ca
     }
     if (method === "GET" && path === "/api/candidates") {
       return json(res, 200, {
-        candidates: CANDIDATES.map((c) => ({ id: c.id, label: c.label, versionHash: c.versionHash(), provenance: c.provenance, supportedTestIds: c.supportedTestIds })),
+        candidates: candidates.map((c) => ({ id: c.id, label: c.label, versionHash: c.versionHash(), provenance: c.provenance, supportedTestIds: c.supportedTestIds })),
       });
     }
     if (method === "GET" && path === "/api/tests") {

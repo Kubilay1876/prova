@@ -7,7 +7,7 @@ import type { ExamExchange } from "../exchange/examExchange.js";
 import type { ExamGate } from "../gate/gate.js";
 import type { ToolResult } from "../atk/atkClient.js";
 import { evaluateT03 } from "../evaluator/t03.js";
-import { CANDIDATES, type Candidate } from "../candidates/scripted.js";
+import type { Candidate } from "../candidates/scripted.js";
 import { FIXTURES, FIXTURE_HASH, POLICY_HASH, SUITE_HASH, SUITE_VERSION, TESTS } from "../tests/catalog.js";
 
 export class ApiError extends Error {
@@ -77,6 +77,7 @@ export interface RunManagerDeps {
   exchange: ExamExchange;
   /** null when the exam ATK could not be verified; runs are then refused with 503. */
   gate: ExamGate | null;
+  candidates: Candidate[];
   stepDelayMs: number;
 }
 
@@ -172,7 +173,7 @@ export class RunManager {
       }
       return { run: rec.run, created: false };
     }
-    const candidate = CANDIDATES.find((c) => c.id === input.candidateId);
+    const candidate = this.d.candidates.find((c) => c.id === input.candidateId);
     if (!candidate) throw new ApiError(404, "CANDIDATE_NOT_FOUND", "Aday bulunamadı");
     const known = new Set(TESTS.map((t) => t.id));
     if (input.testIds.length === 0 || new Set(input.testIds).size !== input.testIds.length || input.testIds.some((t) => !known.has(t))) {
@@ -261,15 +262,28 @@ export class RunManager {
       const fx = FIXTURES[row.testId];
       exchange.beginScenario({ runId: run.id, testId: row.testId, ...fx });
       const ctx = { runId: run.id, testId: row.testId };
+      const checkpoint = () => {
+        if (run.cancelRequested) throw new CancelledError();
+      };
       const env = {
+        testId: row.testId,
+        checkpoint,
         call: async (name: string, args: Record<string, unknown>): Promise<ToolResult> => {
-          if (run.cancelRequested) throw new CancelledError();
+          checkpoint();
           return gate.callTool(ctx, name, args);
         },
         say: (summary: string) =>
-          void store.append(run.id, { testId: row.testId, kind: "MODEL_ACTION", actor: "CANDIDATE", summary, payload: { synthetic: true, note: "scripted stand-in, not an LLM" } }),
+          void store.append(run.id, {
+            testId: row.testId,
+            kind: "MODEL_ACTION",
+            actor: "CANDIDATE",
+            summary,
+            payload: candidate.kind === "LLM" ? { note: "harness note, not model output" } : { synthetic: true, note: "scripted stand-in, not an LLM" },
+          }),
+        modelCall: (summary: string, payload: Record<string, unknown>) =>
+          void store.append(run.id, { testId: row.testId, kind: "MODEL_ACTION", actor: "CANDIDATE", summary, payload }),
         pause: async () => {
-          if (run.cancelRequested) throw new CancelledError();
+          checkpoint();
           await new Promise((r) => setTimeout(r, this.d.stepDelayMs));
         },
       };
@@ -322,7 +336,7 @@ export class RunManager {
       requiredPassed,
       requiredFailed,
       requiredResolved: requiredPassed + requiredFailed,
-      modelCalls: 0,
+      modelCalls: events.filter((e) => e.kind === "MODEL_ACTION" && e.payload.modelCall === true).length,
       toolCalls: events.filter((e) => e.kind === "TOOL_REQUEST").length,
       attemptedViolations: run.findings.length,
       blockedEffects: events.filter((e) => e.kind === "GATE_DECISION" && e.payload.decision === "BLOCKED").length,
@@ -346,12 +360,14 @@ export class RunManager {
    */
   private freezeReport(rec: Rec, note?: string) {
     const run = rec.run;
-    const candidate = CANDIDATES.find((c) => c.id === run.candidateId);
+    const candidate = this.d.candidates.find((c) => c.id === run.candidateId);
+    const events = this.d.store.read(run.id);
+    const llmSpendUsd = events.reduce((s, e) => s + (e.payload.modelCall === true ? Number(e.payload.costUsd ?? 0) : 0), 0);
     const body = {
       reportVersion: "1",
       runId: run.id,
       candidate: candidate
-        ? { id: candidate.id, label: candidate.label, kind: candidate.kind, provenance: candidate.provenance, versionHash: run.candidateVersionHash }
+        ? { id: candidate.id, label: candidate.label, kind: candidate.kind, model: candidate.model ?? null, provenance: candidate.provenance, versionHash: run.candidateVersionHash }
         : { id: run.candidateId },
       suiteVersion: SUITE_VERSION,
       suiteHash: run.suiteHash,
@@ -369,11 +385,15 @@ export class RunManager {
       limitations: [
         "Bu karne kısmi olabilir: tam sınav için altı zorunlu testin hepsi çalışmış olmalıdır.",
         ...(candidate?.kind === "SCRIPTED_STAND_IN" ? ["Aday kodla yazılmış bir betiktir; dil modeli (LLM) değildir."] : []),
+        ...(candidate?.kind === "LLM"
+          ? [`Aday gerçek bir dil modelidir (${candidate.model}). Sonuç bu tek koşuya aittir; aynı model başka koşuda farklı davranabilir.`]
+          : []),
         "Pazar verisi sentetiktir, emirler sanaldır; gerçek borsada işlem yapılmamıştır.",
         "Zincir kaydı yoktur; bu dosya yalnız yerel bir kayıttır.",
         ...(note ? [note] : []),
       ],
-      evidence: { events: this.d.store.read(run.id) },
+      llmSpendUsdEstimate: Number(llmSpendUsd.toFixed(6)),
+      evidence: { events },
     };
     const bytes = Buffer.from(JSON.stringify(body, null, 2), "utf8");
     writeFileSync(this.reportFile(run.id), bytes);

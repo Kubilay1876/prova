@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
 import { EventStore } from "./core/eventStore.js";
 import { ExamExchange } from "./exchange/examExchange.js";
 import { startExamAtk, type ExamAtk } from "./atk/atkClient.js";
@@ -7,6 +8,9 @@ import { ExamGate } from "./gate/gate.js";
 import { RunManager } from "./runs/runManager.js";
 import { createApiServer, type Capabilities } from "./api/server.js";
 import { POLICY } from "./tests/catalog.js";
+import { SCRIPTED_CANDIDATES, type Candidate } from "./candidates/scripted.js";
+import { llmCandidate } from "./candidates/llm.js";
+import { Budget } from "./llm/budget.js";
 
 const EXAM_API_KEY = "prova-fake-key"; // fake exam credential, not a real key
 
@@ -25,10 +29,13 @@ export async function startApp(opts: AppOptions) {
   const exchange = new ExamExchange(store, { port: opts.exchangePort, apiKey: EXAM_API_KEY });
   await exchange.start();
 
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+  const hasKey = Boolean(process.env.ANTHROPIC_API_KEY);
   const caps: Capabilities = {
     atkMarket: { status: "NOT_CONFIGURED", checkedAt: null, message: "Gerçek piyasa salt okuma süreci henüz kurulmadı" },
     atkExam: { status: "NOT_CONFIGURED", checkedAt: null, message: "Sınav ATK bağlantısı denenmedi" },
-    llm: { status: "NOT_CONFIGURED", checkedAt: null, message: "Henüz gerçek model çağrısı yapılmadı" },
+    // A configured key is not proof: VERIFIED only after a real model call succeeds.
+    llm: { status: "NOT_CONFIGURED", checkedAt: null, message: hasKey ? `Anahtar var (${model}); henüz gerçek model çağrısı yapılmadı` : "Model anahtarı yok" },
     chain: { status: "NOT_CONFIGURED", checkedAt: null, message: "Fuji kaydı henüz yok" },
   };
 
@@ -48,8 +55,26 @@ export async function startApp(opts: AppOptions) {
     caps.atkExam = { status: "ERROR", checkedAt: new Date().toISOString(), message: `ATK başlatılamadı: ${(err as Error).message}` };
   }
 
-  const runs = new RunManager({ dataDir: runsDir, store, exchange, gate, stepDelayMs: opts.stepDelayMs });
-  const api = createApiServer({ runs, capabilities: () => caps });
+  const candidates: Candidate[] = [...SCRIPTED_CANDIDATES];
+  if (hasKey && atk) {
+    candidates.unshift(
+      llmCandidate({
+        id: "claude-standard",
+        label: `Claude adayı (${model}, gerçek LLM)`,
+        model,
+        client: new Anthropic(),
+        budget: new Budget(join(opts.dataDir, "spend.json")),
+        atkTools: atk.tools,
+        maxModelCallsPerTest: 6,
+        onModelOk: (m) => {
+          caps.llm = { status: "VERIFIED", checkedAt: new Date().toISOString(), message: `${m} gerçek çağrısı başarılı` };
+        },
+      }),
+    );
+  }
+
+  const runs = new RunManager({ dataDir: runsDir, store, exchange, gate, candidates, stepDelayMs: opts.stepDelayMs });
+  const api = createApiServer({ runs, candidates, capabilities: () => caps });
   await new Promise<void>((resolve, reject) => {
     api.once("error", reject);
     api.listen(opts.apiPort, "127.0.0.1", () => resolve());

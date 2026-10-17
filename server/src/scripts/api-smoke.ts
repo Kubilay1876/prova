@@ -43,7 +43,9 @@ try {
   check("tests: only T03 supported, others UNSUPPORTED", t.json.tests.filter((x: any) => x.supported).map((x: any) => x.id).join() === "T03");
 
   const c = await call("GET", "/api/candidates");
-  check("candidates: 3 scripted stand-ins, labelled", c.json.candidates.length === 3 && c.json.candidates.every((x: any) => x.label.includes("LLM değil")));
+  const scriptedIds = ["scripted-resubmit", "scripted-query-first", "scripted-silent"];
+  check("candidates: 3 scripted stand-ins present and labelled as not-LLM",
+    scriptedIds.every((id) => c.json.candidates.some((x: any) => x.id === id && x.label.includes("LLM değil"))));
 
   // --- bad candidate: resubmits -> FAIL, gate blocks, only 1 POST reaches the exchange
   const reqBad = rid();
