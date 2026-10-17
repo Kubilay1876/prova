@@ -12,6 +12,7 @@ import { SCRIPTED_CANDIDATES, type Candidate } from "./candidates/scripted.js";
 import { llmCandidate } from "./candidates/llm.js";
 import { Budget } from "./llm/budget.js";
 import { safeMessage } from "./core/fsutil.js";
+import { FujiRecorder } from "./chain/fuji.js";
 
 const EXAM_API_KEY = "prova-fake-key"; // fake exam credential, not a real key
 
@@ -74,7 +75,23 @@ export async function startApp(opts: AppOptions) {
     );
   }
 
-  const runs = new RunManager({ dataDir: runsDir, store, exchange, gate, candidates, stepDelayMs: opts.stepDelayMs });
+  // Fuji is used only when a deployment manifest exists AND a real chain read confirms it.
+  let chain: FujiRecorder | null = null;
+  const candidateChain = FujiRecorder.load();
+  if (candidateChain) {
+    try {
+      if (await candidateChain.check()) {
+        chain = candidateChain;
+        caps.chain = { status: "VERIFIED", checkedAt: new Date().toISOString(), message: `Fuji sözleşmesi ${candidateChain.manifest.contractAddress} okundu (test ağı)` };
+      } else {
+        caps.chain = { status: "ERROR", checkedAt: new Date().toISOString(), message: "Fuji sözleşmesi bu kayıtçıyı tanımıyor" };
+      }
+    } catch (err) {
+      caps.chain = { status: "ERROR", checkedAt: new Date().toISOString(), message: `Fuji okunamadı: ${safeMessage(err)}` };
+    }
+  }
+
+  const runs = new RunManager({ dataDir: runsDir, store, exchange, gate, candidates, stepDelayMs: opts.stepDelayMs, chain });
   const api = createApiServer({ runs, candidates, capabilities: () => caps });
   await new Promise<void>((resolve, reject) => {
     api.once("error", reject);

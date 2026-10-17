@@ -8,6 +8,7 @@ import type { ExamExchange } from "../exchange/examExchange.js";
 import type { ExamGate } from "../gate/gate.js";
 import type { ToolResult } from "../atk/atkClient.js";
 import { EVALUATORS } from "../evaluator/suite.js";
+import type { ChainReceipt, FujiRecorder } from "../chain/fuji.js";
 import type { Candidate } from "../candidates/scripted.js";
 import { FIXTURES, FIXTURE_HASH, POLICY_HASH, SUITE_HASH, SUITE_VERSION, TESTS } from "../tests/catalog.js";
 
@@ -59,7 +60,7 @@ export interface RunObject {
   };
   reality: { toolOrigin: "ATK_MCP" | "UNVERIFIED"; marketSource: string; execution: string; network: string };
   credentialStatus: "LOCAL_ONLY" | "PENDING" | "FUJI_VERIFIED" | "ERROR";
-  receipt: null;
+  receipt: ChainReceipt | null;
   reportHash: { algorithm: "sha256"; value: string } | null;
 }
 
@@ -80,6 +81,8 @@ export interface RunManagerDeps {
   gate: ExamGate | null;
   candidates: Candidate[];
   stepDelayMs: number;
+  /** Present only when a Fuji deployment manifest and the recorder key exist. */
+  chain: FujiRecorder | null;
 }
 
 export class RunManager {
@@ -358,7 +361,37 @@ export class RunManager {
     run.endedAt = now();
     this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu bitti: ${run.status}, hüküm ${run.verdict}`, payload: { status: run.status, verdict: run.verdict } });
     this.freezeReport(rec);
+    if (this.d.chain && run.reportHash) {
+      run.credentialStatus = "PENDING";
+      this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: "Karne özeti Fuji test ağına gönderiliyor", payload: { credentialStatus: "PENDING" } });
+      void this.anchor(rec, this.d.chain);
+    }
     this.active = null;
+    this.persist(rec);
+  }
+
+  /** Records the frozen report hash on Fuji. The report bytes never change; the receipt lives on the run. */
+  private async anchor(rec: Rec, chain: FujiRecorder) {
+    const run = rec.run;
+    try {
+      const receipt = await chain.record(run.reportHash!.value, run.candidateVersionHash, run.suiteHash);
+      run.receipt = receipt;
+      const ok = receipt.verificationStatus === "VERIFIED";
+      run.credentialStatus = ok ? "FUJI_VERIFIED" : "ERROR";
+      if (ok) run.reality = { ...run.reality, network: "FUJI" };
+      this.d.store.append(run.id, {
+        testId: null,
+        kind: "RUN_STATUS",
+        actor: "SYSTEM",
+        summary: ok
+          ? `Karne Fuji'de doğrulandı: blok ${receipt.blockNumber}, ~${receipt.observedConfirmationMs} ms`
+          : "Fuji işlemi gönderildi ama olay doğrulanamadı",
+        payload: { credentialStatus: run.credentialStatus, txHash: receipt.txHash, blockNumber: receipt.blockNumber },
+      });
+    } catch (err) {
+      run.credentialStatus = "ERROR";
+      this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Fuji kaydı başarısız: ${safeMessage(err)}`, payload: { credentialStatus: "ERROR" } });
+    }
     this.persist(rec);
   }
 

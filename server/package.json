@@ -13,7 +13,9 @@
     "budget:test": "tsx src/scripts/budget-test.ts",
     "wallet:init": "tsx src/chain/wallet-init.ts",
     "eval:test": "tsx src/scripts/eval-test.ts",
-    "llm:run": "tsx src/scripts/llm-run.ts"
+    "llm:run": "tsx src/scripts/llm-run.ts",
+    "chain:compile": "tsx src/chain/compile.ts",
+    "chain:deploy": "tsx src/chain/deploy.ts"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "solc": "^0.8.37",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

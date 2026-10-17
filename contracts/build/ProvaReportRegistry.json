@@ -1,0 +1,100 @@
+{
+  "contractName": "ProvaReportRegistry",
+  "compiler": "solc 0.8.37+commit.f401782d.Emscripten.clang",
+  "evmVersion": "shanghai",
+  "sourceSha256": "45227acaf9ec5b329d46628beb988f950c8cca32f776e26d365e8a2dd48de585",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "reportHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "candidateVersionHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "suiteHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recorder",
+          "type": "address"
+        }
+      ],
+      "name": "ReportRecorded",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "reportHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "candidateVersionHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "suiteHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "record",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "recordedAt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "recorder",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60a0604052348015600e575f5ffd5b50336080526080516102846100305f395f8181607a015260d401526102845ff3fe608060405234801561000f575f5ffd5b506004361061003f575f3560e01c8063bc23adb714610043578063f33930d914610075578063ffffb390146100b4575b5f5ffd5b61006261005136600461020e565b5f6020819052908152604090205481565b6040519081526020015b60405180910390f35b61009c7f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b03909116815260200161006c565b6100c76100c2366004610225565b6100c9565b005b336001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146101355760405162461bcd60e51b815260206004820152600c60248201526b3737ba103932b1b7b93232b960a11b60448201526064015b60405180910390fd5b8261016f5760405162461bcd60e51b815260206004820152600a6024820152690cadae0e8f240d0c2e6d60b31b604482015260640161012c565b5f83815260208190526040902054156101bd5760405162461bcd60e51b815260206004820152601060248201526f185b1c9958591e481c9958dbdc99195960821b604482015260640161012c565b5f83815260208181526040918290204390558151848152908101839052339185917f1837689050c90688ff8b7125cb114a0f7df7fab46199a9053b5d35e57d9e8b3a910160405180910390a3505050565b5f6020828403121561021e575f5ffd5b5035919050565b5f5f5f60608486031215610237575f5ffd5b50508135936020830135935060409092013591905056fea26469706673582212209d35980cf0b36b93aa2b56a3dab799c06d72e1df223b92d4ceb7fbd408ef7cf164736f6c63430008250033"
+}
