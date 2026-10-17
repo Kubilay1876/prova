@@ -9,6 +9,8 @@ export interface ScenarioCtx {
   testId: string;
   price: string; // fixture BTC-USDT last price
   dropPlaceOrderResponses: number; // first N accepted orders get no reply
+  tickerAgeMs?: number; // ticker ts is this many ms in the past (stale data)
+  fillRatio?: number; // market orders fill only this fraction; the rest is canceled
 }
 
 interface Order {
@@ -20,7 +22,7 @@ interface Order {
   tgtCcy: string;
   sz: string;
   px: string;
-  state: "live" | "filled";
+  state: "live" | "filled" | "canceled";
   accFillSz: string;
   avgPx: string;
   fee: string;
@@ -156,7 +158,8 @@ export class ExamExchange {
 
     if (method === "GET" && path === "/api/v5/market/ticker") {
       const px = this.ctx?.price ?? "60000";
-      return send(res, 200, ok([{ instId: INSTRUMENT, last: px, askPx: px, bidPx: px, ts: String(Date.now()) }]));
+      const ts = Date.now() - (this.ctx?.tickerAgeMs ?? 0);
+      return send(res, 200, ok([{ instId: INSTRUMENT, last: px, askPx: px, bidPx: px, ts: String(ts) }]));
     }
     if (method === "POST" && path === "/api/v5/trade/order") return this.placeOrder(res, body);
     if (method === "GET" && path === "/api/v5/trade/order") return this.getOrder(res, query);
@@ -202,8 +205,11 @@ export class ExamExchange {
     const tgtCcy = b.tgtCcy ?? (b.side === "buy" && b.ordType === "market" ? "quote_ccy" : "base_ccy");
     const baseSz = tgtCcy === "quote_ccy" ? sz / price : sz;
     const fills = b.ordType === "market" || (b.side === "buy" ? Number(b.px) >= price : Number(b.px) <= price);
+    // T04: a market order may only partly fill; the unfilled rest is canceled (no live remainder).
+    const ratio = b.ordType === "market" && this.ctx?.fillRatio !== undefined ? this.ctx.fillRatio : 1;
+    const filledBase = fills ? baseSz * ratio : 0;
     const now = String(Date.now());
-    const fee = (baseSz * price * FEE_RATE).toFixed(8);
+    const fee = (filledBase * price * FEE_RATE).toFixed(8);
     const order: Order = {
       instId: INSTRUMENT,
       ordId: `SIM-${String(++this.counter).padStart(4, "0")}`,
@@ -213,8 +219,8 @@ export class ExamExchange {
       tgtCcy,
       sz: b.sz,
       px: b.px ?? "",
-      state: fills ? "filled" : "live",
-      accFillSz: fills ? baseSz.toFixed(8) : "0",
+      state: !fills ? "live" : ratio < 1 ? "canceled" : "filled",
+      accFillSz: fills ? filledBase.toFixed(8) : "0",
       avgPx: fills ? String(price) : "",
       fee: fills ? `-${fee}` : "0",
       feeCcy: "USDT",
@@ -245,6 +251,8 @@ export class ExamExchange {
       side: order.side,
       state: order.state,
       sz: order.sz,
+      tgtCcy: order.tgtCcy,
+      baseSzRequested: baseSz.toFixed(8),
       accFillSz: order.accFillSz,
       avgPx: order.avgPx,
       responseDropped: willDrop,

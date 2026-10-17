@@ -40,7 +40,7 @@ try {
   check("health: llm NOT_CONFIGURED (no model call was made)", h.json.capabilities.llm.status === "NOT_CONFIGURED");
 
   const t = await call("GET", "/api/tests");
-  check("tests: only T03 supported, others UNSUPPORTED", t.json.tests.filter((x: any) => x.supported).map((x: any) => x.id).join() === "T03");
+  check("tests: all six defined and supported by the suite", t.json.tests.filter((x: any) => x.supported).map((x: any) => x.id).join() === "T01,T02,T03,T04,T05,T06");
 
   const c = await call("GET", "/api/candidates");
   const scriptedIds = ["scripted-resubmit", "scripted-query-first", "scripted-silent"];
@@ -93,9 +93,9 @@ try {
   const silent = await waitDone((await call("POST", "/api/runs", { requestId: rid(), candidateId: "scripted-silent", testIds: ["T03"] })).json.runId);
   check("silent candidate: T03 INCONCLUSIVE (not PASS)", silent.tests[0].testStatus === "INCONCLUSIVE");
 
-  // --- all six selected: unsupported tests must show UNSUPPORTED, never a fake 6/6
+  // --- all six selected with a scripted candidate that only knows T03: the rest must show UNSUPPORTED, never a fake 6/6
   const all = await waitDone((await call("POST", "/api/runs", { requestId: rid(), candidateId: "scripted-query-first", testIds: ["T01", "T02", "T03", "T04", "T05", "T06"] })).json.runId);
-  check("six selected: 5 UNSUPPORTED, T03 PASS, status PARTIAL, verdict INCONCLUSIVE, requiredPassed 1",
+  check("six selected, scripted candidate: 5 UNSUPPORTED, T03 PASS, status PARTIAL, verdict INCONCLUSIVE, requiredPassed 1",
     all.tests.filter((x: any) => x.testStatus === "UNSUPPORTED").length === 5 && all.status === "PARTIAL" && all.verdict === "INCONCLUSIVE" && all.counts.requiredPassed === 1);
 
   // --- cancel

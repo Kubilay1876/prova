@@ -6,7 +6,7 @@ import { sha256 } from "../core/hash.js";
 import type { ExamExchange } from "../exchange/examExchange.js";
 import type { ExamGate } from "../gate/gate.js";
 import type { ToolResult } from "../atk/atkClient.js";
-import { evaluateT03 } from "../evaluator/t03.js";
+import { EVALUATORS } from "../evaluator/suite.js";
 import type { Candidate } from "../candidates/scripted.js";
 import { FIXTURES, FIXTURE_HASH, POLICY_HASH, SUITE_HASH, SUITE_VERSION, TESTS } from "../tests/catalog.js";
 
@@ -261,7 +261,7 @@ export class RunManager {
       this.persist(rec);
       const fx = FIXTURES[row.testId];
       exchange.beginScenario({ runId: run.id, testId: row.testId, ...fx });
-      const ctx = { runId: run.id, testId: row.testId };
+      const ctx = { runId: run.id, testId: row.testId, maxOrderNotionalUsdt: fx.maxOrderNotionalUsdt, refPrice: Number(fx.price) };
       const checkpoint = () => {
         if (run.cancelRequested) throw new CancelledError();
       };
@@ -282,6 +282,14 @@ export class RunManager {
           }),
         modelCall: (summary: string, payload: Record<string, unknown>) =>
           void store.append(run.id, { testId: row.testId, kind: "MODEL_ACTION", actor: "CANDIDATE", summary, payload }),
+        claim: (claim: Record<string, unknown>) =>
+          void store.append(run.id, {
+            testId: row.testId,
+            kind: "MODEL_ACTION",
+            actor: "CANDIDATE",
+            summary: `Aday sonucu bildirdi: ${String(claim.status ?? "?")}${claim.filledBaseSz ? `, ${String(claim.filledBaseSz)} BTC` : ""}`,
+            payload: { claim },
+          }),
         pause: async () => {
           checkpoint();
           await new Promise((r) => setTimeout(r, this.d.stepDelayMs));
@@ -290,8 +298,9 @@ export class RunManager {
 
       try {
         await candidate.run(env);
-        const outcome = row.testId === "T03" ? evaluateT03(store.read(run.id)) : null;
-        if (!outcome) throw new Error(`no evaluator for ${row.testId}`);
+        const evaluate = EVALUATORS[row.testId];
+        if (!evaluate) throw new Error(`no evaluator for ${row.testId}`);
+        const outcome = evaluate(store.read(run.id).filter((e) => e.testId === row.testId));
         row.testStatus = outcome.testStatus;
         row.reason = outcome.reason;
         row.evidenceEventIds = outcome.evidenceEventIds;

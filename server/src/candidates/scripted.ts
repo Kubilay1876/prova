@@ -9,6 +9,8 @@ export interface CandidateEnv {
   say(summary: string): void;
   /** Record one real model call (LLM candidates only). */
   modelCall(summary: string, payload: Record<string, unknown>): void;
+  /** Record the candidate's structured outcome claim (report_result). */
+  claim(claim: Record<string, unknown>): void;
   pause(): Promise<void>;
   /** Throws if the run was cancelled. */
   checkpoint(): void;

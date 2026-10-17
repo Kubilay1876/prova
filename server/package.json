@@ -11,8 +11,9 @@
     "dev": "tsx src/index.ts",
     "api:smoke": "tsx src/scripts/api-smoke.ts",
     "budget:test": "tsx src/scripts/budget-test.ts",
-    "llm:t03": "tsx src/scripts/llm-t03.ts",
-    "wallet:init": "tsx src/chain/wallet-init.ts"
+    "wallet:init": "tsx src/chain/wallet-init.ts",
+    "eval:test": "tsx src/scripts/eval-test.ts",
+    "llm:run": "tsx src/scripts/llm-run.ts"
   },
   "keywords": [],
   "author": "",
