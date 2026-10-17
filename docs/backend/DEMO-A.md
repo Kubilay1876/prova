@@ -19,9 +19,8 @@ Kontrol: `http://127.0.0.1:5173` açılıyor, aday listesinde `Claude adayı (cl
 
 Bu koşu **kayıtlı bir koşudur**, canlı değildir; böyle söylenmelidir.
 
-- Koşu `run_mvcbyp92afd8` (17 Ekim 14.45): gerçek Claude, 6/6 PASS + sınavcı F01/F05 seçti, ikisi PASS. 30 model çağrısı, ~$0.157.
-- Rapor sha256: `3c15c7195b332e0c1d2fc95364db35d6ee15e8296517720aeb5d33292d02f502`
-- Fuji işlemi: https://testnet.snowtrace.io/tx/0xc369e28f385a9bf64a649757d6f5ed55c9d087c49737cb0537351d5af6dd613c (blok 59596761)
+- **Önerilen (Türkçe olay metinleri):** koşu `run_mvcdy9q8nm83` (17 Ekim ~15.35): gerçek Claude, 6/6 PASS + sınavcı F01/F04 seçti (gerekçeler Türkçe), ikisi PASS. Claude'un mesajları Türkçe. 32 model çağrısı, ~$0.173. Rapor sha256 `c8662a4657f2883cc1252092412d5ad77adbf9459241b44f16f15b6dac690b76`. Fuji işlemi: https://testnet.snowtrace.io/tx/0xa4691b24158a9114b271b54f1ccfe3399f1861fbaff4f59d3bdd61cc43407291 (blok 59598930). Tek İngilizce kalıntı: "Aday sonucu bildirdi: filled" satırı (sonraki koşularda Türkçe). ATK'nin hata mesajı bilerek orijinal İngilizce alıntılanır (kanıt).
+- Önceki demo koşusu `run_mvcbyp92afd8` (14.45): 6/6 + F01/F05, olay metinleri ve sınavcı gerekçeleri İngilizce. Rapor sha256 `3c15c7195b332e0c1d2fc95364db35d6ee15e8296517720aeb5d33292d02f502`, Fuji işlemi https://testnet.snowtrace.io/tx/0xc369e28f385a9bf64a649757d6f5ed55c9d087c49737cb0537351d5af6dd613c (blok 59596761).
 - Sözleşme: https://testnet.snowtrace.io/address/0xda0a8d5e87f90da24dec7338aa4bcc6af43cea2b
 
 ## Canlı akış önerisi

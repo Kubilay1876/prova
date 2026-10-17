@@ -37,7 +37,10 @@ const rid = () => `smoke-${Date.now().toString(36)}-${n++}`;
 try {
   const h = await call("GET", "/api/health");
   check("health: atkExam VERIFIED by a real call", h.json.capabilities.atkExam.status === "VERIFIED", h.json.capabilities.atkExam.message);
-  check("health: llm NOT_CONFIGURED (no model call was made)", h.json.capabilities.llm.status === "NOT_CONFIGURED");
+  // With a key the server proves the model by one tiny real call at startup; without a key it must say NOT_CONFIGURED.
+  check("health: llm VERIFIED only by a real call, otherwise NOT_CONFIGURED (never assumed)",
+    ["VERIFIED", "NOT_CONFIGURED"].includes(h.json.capabilities.llm.status) && (h.json.capabilities.llm.status !== "VERIFIED" || /çağrısı başarılı/.test(h.json.capabilities.llm.message)),
+    `${h.json.capabilities.llm.status}: ${h.json.capabilities.llm.message}`);
 
   const t = await call("GET", "/api/tests");
   check("tests: all six defined and supported by the suite", t.json.tests.filter((x: any) => x.supported).map((x: any) => x.id).join() === "T01,T02,T03,T04,T05,T06");

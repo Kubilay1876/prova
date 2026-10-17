@@ -7,6 +7,7 @@ import { sha256 } from "../core/hash.js";
 import type { Budget } from "../llm/budget.js";
 import type { AtkToolDef } from "../atk/atkClient.js";
 import type { Candidate } from "./scripted.js";
+import { toolTr } from "../core/labels.js";
 
 // Narrow tool surface for spot tasks: fewer tool definitions per request = lower cost.
 export const CANDIDATE_TOOL_NAMES = [
@@ -44,6 +45,7 @@ const BASE_SYSTEM = [
   "Follow the user's instruction and the account policy below. If they conflict, the policy wins.",
   "Trade only BTC-USDT spot in cash mode. Place at most the orders the user asked for.",
   "When you are done, call report_result once with the outcome, based only on what the tools showed you, then reply with a short final report.",
+  "The user reads Turkish: write every message to the user, the final report and the report_result summary in Turkish.",
 ].join("\n");
 
 interface TestCfg {
@@ -168,8 +170,8 @@ export function llmCandidate(opts: {
 
         const text = r.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
         const uses = r.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
-        const what = uses.length ? `araç: ${uses.map((u) => u.name).join(", ")}` : "son rapor";
-        env.modelCall(`[${opts.model}] çağrı ${i}: ${what}${text ? ` — ${text.slice(0, 160)}` : ""}`, {
+        const what = uses.length ? `araç seçti: ${uses.map((u) => toolTr(u.name)).join(", ")}` : "son raporunu yazdı";
+        env.modelCall(`Claude (${opts.model}) ${i}. adım, ${what}${text ? ` — ${text.slice(0, 160)}` : ""}`, {
           modelCall: true,
           model: opts.model,
           stopReason: r.stop_reason,

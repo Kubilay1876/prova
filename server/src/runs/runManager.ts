@@ -8,6 +8,7 @@ import type { ExamExchange } from "../exchange/examExchange.js";
 import type { ExamGate } from "../gate/gate.js";
 import type { ToolResult } from "../atk/atkClient.js";
 import { EVALUATORS } from "../evaluator/suite.js";
+import { claimTr, tr } from "../core/labels.js";
 import type { ChainReceipt, FujiRecorder } from "../chain/fuji.js";
 import type { Candidate } from "../candidates/scripted.js";
 import { FIXTURES, FIXTURE_HASH, FOLLOWUPS, POLICY_HASH, SUITE_HASH, SUITE_VERSION, TESTS } from "../tests/catalog.js";
@@ -269,7 +270,7 @@ export class RunManager {
       if (!def.supported || !candidate.supportedTestIds.includes(row.testId)) {
         row.testStatus = "UNSUPPORTED";
         row.reason = def.unsupportedReason ?? "Aday bu testi desteklemiyor";
-        store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} UNSUPPORTED: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
+        store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${tr("UNSUPPORTED")}: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
         this.persist(rec);
         continue;
       }
@@ -379,7 +380,7 @@ export class RunManager {
       row.reason = outcome.reason;
       row.evidenceEventIds = outcome.evidenceEventIds;
       run.findings.push(...outcome.findings);
-      store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${outcome.testStatus}: ${outcome.reason}`, payload: { testStatus: outcome.testStatus, reason: outcome.reason, evidenceEventIds: outcome.evidenceEventIds, findingIds: outcome.findings.map((f) => f.id) } });
+      store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${tr(outcome.testStatus)}: ${outcome.reason}`, payload: { testStatus: outcome.testStatus, reason: outcome.reason, evidenceEventIds: outcome.evidenceEventIds, findingIds: outcome.findings.map((f) => f.id) } });
     } catch (err) {
       if (err instanceof CancelledError) {
         row.testStatus = "CANCELLED";
@@ -388,7 +389,7 @@ export class RunManager {
         row.testStatus = "ERROR";
         row.reason = `Altyapı hatası: ${safeMessage(err)}`;
       }
-      store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${row.testStatus}: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
+      store.append(run.id, { testId: row.testId, kind: "TEST_RESULT", actor: "EVALUATOR", summary: `${row.testId} ${tr(row.testStatus)}: ${row.reason}`, payload: { testStatus: row.testStatus, reason: row.reason } });
     }
   }
 
@@ -430,7 +431,7 @@ export class RunManager {
     const criticalFollowUp = run.findings.some((f) => f.severity === "CRITICAL" && run.followUps.some((r) => r.testId === f.testId));
     run.verdict = requiredFailed > 0 || criticalFollowUp ? "FAIL" : allSix && requiredPassed === 6 ? "PASS" : "INCONCLUSIVE";
     run.endedAt = now();
-    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Sınav bitti: ${finalStatus}, hüküm ${run.verdict}; karne donduruldu`, payload: { status: finalStatus, verdict: run.verdict } });
+    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Sınav bitti: ${tr(finalStatus)}, hüküm ${tr(run.verdict)}; karne donduruldu`, payload: { status: finalStatus, verdict: run.verdict } });
     this.freezeReport(rec, undefined, finalStatus);
 
     // Keep the run non-terminal while the chain record is pending, so polling clients see the
@@ -443,7 +444,7 @@ export class RunManager {
       await Promise.race([anchoring, new Promise((r) => setTimeout(r, ANCHOR_WAIT_MS))]);
     }
     run.status = finalStatus;
-    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu bitti: ${finalStatus}, karne kaydı ${run.credentialStatus}`, payload: { status: finalStatus, verdict: run.verdict, credentialStatus: run.credentialStatus } });
+    this.d.store.append(run.id, { testId: null, kind: "RUN_STATUS", actor: "SYSTEM", summary: `Koşu bitti: ${tr(finalStatus)}, karne kaydı: ${tr(run.credentialStatus)}`, payload: { status: finalStatus, verdict: run.verdict, credentialStatus: run.credentialStatus } });
     this.active = null;
     this.persist(rec);
   }

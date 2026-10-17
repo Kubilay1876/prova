@@ -127,7 +127,7 @@ export class ExamExchange {
       try {
         this.route(req, res, Buffer.concat(chunks).toString("utf8"));
       } catch (err) {
-        this.log("exam exchange internal error", { message: (err as Error).message });
+        this.log("Sınav borsası iç hatası", { message: (err as Error).message });
         send(res, 500, { code: "50000", msg: "exam exchange internal error", data: [] });
       }
     });
@@ -149,7 +149,7 @@ export class ExamExchange {
     }
     // Every HTTP request is recorded, so ATK/SDK-level repeats are distinguishable
     // from the candidate's own tool calls.
-    this.log(`HTTP ${method} ${path}`, { http: { method, path, query, body } });
+    this.log(`Borsaya ulaşan HTTP isteği: ${method} ${path}`, { http: { method, path, query, body } });
 
     const isPrivate = path.startsWith("/api/v5/trade/") || path.startsWith("/api/v5/account/");
     if (isPrivate && req.headers["ok-access-key"] !== this.opts.apiKey) {
@@ -177,7 +177,7 @@ export class ExamExchange {
       );
     }
 
-    this.log("unsupported endpoint (not forwarded anywhere)", { method, path });
+    this.log("Desteklenmeyen uç: hiçbir yere aktarılmadı", { method, path });
     send(res, 404, { code: "50000", msg: `PROVA exam exchange: unsupported endpoint ${method} ${path}`, data: [] });
   }
 
@@ -185,7 +185,7 @@ export class ExamExchange {
     this.placeOrderRequests++;
     const b = (body && typeof body === "object" ? body : {}) as Record<string, string>;
     const reject = (sCode: string, sMsg: string) => {
-      this.log("order rejected", { sCode, sMsg, clOrdId: b.clOrdId ?? "" });
+      this.log(`Defter: emir reddedildi (${sCode} ${sMsg})`, { sCode, sMsg, clOrdId: b.clOrdId ?? "" });
       send(res, 200, {
         code: "1",
         msg: "All operations failed",
@@ -245,7 +245,8 @@ export class ExamExchange {
 
     const willDrop = this.dropsLeft > 0;
     // Truth is written to the ledger before the reply is given or dropped.
-    this.log(willDrop ? "order accepted, reply dropped" : "order accepted", {
+    const fillTr = order.state === "filled" ? "tamamen gerçekleşti" : order.state === "canceled" ? (filledBase > 0 ? "kısmen gerçekleşti, kalanı iptal" : "hiç gerçekleşmedi, iptal") : "beklemede";
+    this.log(willDrop ? `Defter: emir ${order.ordId} kabul edildi (${fillTr}); cevap adaya BİLEREK iletilmedi` : `Defter: emir ${order.ordId} kabul edildi (${fillTr})`, {
       ordId: order.ordId,
       clOrdId: order.clOrdId,
       side: order.side,

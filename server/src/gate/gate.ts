@@ -4,6 +4,7 @@
 import type { EventStore } from "../core/eventStore.js";
 import type { ToolCaller, ToolResult } from "../atk/atkClient.js";
 import { orderNotionalUsdt } from "../core/orders.js";
+import { argsTr, toolTr } from "../core/labels.js";
 
 // Names verified against the live MCP tool list (listTools), not memory.
 const ECONOMIC_WRITE_TOOLS = new Set(["spot_place_order", "spot_batch_orders", "spot_place_algo_order"]);
@@ -20,13 +21,6 @@ export interface GateContext {
   refPrice?: number;
 }
 
-function brief(args: Record<string, unknown>): string {
-  const pick = ["instId", "side", "ordType", "sz", "ordId", "clOrdId"] as const;
-  return pick
-    .filter((k) => args[k] !== undefined)
-    .map((k) => `${k}=${String(args[k])}`)
-    .join(" ");
-}
 
 /** Reduce an ATK tool reply to a small, secret-free summary. */
 export function summarizeToolResult(r: ToolResult): Record<string, unknown> {
@@ -62,7 +56,7 @@ export class ExamGate {
       testId: ctx.testId,
       kind: "TOOL_REQUEST",
       actor: "CANDIDATE",
-      summary: `${name} ${brief(args)}`.trim(),
+      summary: `Aday isteği — ${toolTr(name)}${argsTr(args) ? `: ${argsTr(args)}` : ""}`,
       payload: { tool: name, args },
     });
 
@@ -71,7 +65,7 @@ export class ExamGate {
         testId: ctx.testId,
         kind: "GATE_DECISION",
         actor: "GATE",
-        summary: `BLOCKED ${name}: ${summary}`,
+        summary: `Geçit ENGELLEDİ — ${toolTr(name)}: ${summary}; borsaya ulaşmadı`,
         payload: { decision: "BLOCKED", rule, requestEventId: req.id, tool: name, reachedExchange: false, ...extra },
       });
       // The candidate sees a neutral venue-style error; no hint about the exam.
@@ -82,7 +76,7 @@ export class ExamGate {
     if (name === "spot_place_order" && ctx.maxOrderNotionalUsdt !== undefined) {
       const notional = orderNotionalUsdt(args, ctx.refPrice ?? 0);
       if (notional !== null && notional > ctx.maxOrderNotionalUsdt) {
-        return block("MAX_ORDER_NOTIONAL", `order ~${notional.toFixed(2)} USDT > policy ${ctx.maxOrderNotionalUsdt} USDT`, {
+        return block("MAX_ORDER_NOTIONAL", `emir ~${notional.toFixed(2)} USDT, politika sınırı ${ctx.maxOrderNotionalUsdt} USDT`, {
           notionalUsdt: Number(notional.toFixed(8)),
           limitUsdt: ctx.maxOrderNotionalUsdt,
         });
@@ -97,7 +91,7 @@ export class ExamGate {
           testId: ctx.testId,
           kind: "GATE_DECISION",
           actor: "GATE",
-          summary: `BLOCKED ${name}: economic write limit (${this.policy.maxEconomicWritesPerTest}) reached`,
+          summary: `Geçit ENGELLEDİ — ${toolTr(name)}: bu testteki emir hakkı (${this.policy.maxEconomicWritesPerTest}) doldu; borsaya ulaşmadı`,
           payload: {
             decision: "BLOCKED",
             rule: "MAX_ECONOMIC_WRITES_PER_TEST",
@@ -120,7 +114,7 @@ export class ExamGate {
         testId: ctx.testId,
         kind: "GATE_DECISION",
         actor: "GATE",
-        summary: `ALLOWED ${name} (economic write ${used + 1}/${this.policy.maxEconomicWritesPerTest})`,
+        summary: `Geçit izin verdi — ${toolTr(name)} (bu testteki emir ${used + 1}/${this.policy.maxEconomicWritesPerTest})`,
         payload: { decision: "ALLOWED", requestEventId: req.id, tool: name },
       });
     }
@@ -131,12 +125,16 @@ export class ExamGate {
     } catch (err) {
       result = { isError: true, content: [{ type: "text", text: JSON.stringify({ tool: name, error: true, message: (err as Error).message }) }] };
     }
+    const s = summarizeToolResult(result);
+    // The ATK error text is quoted verbatim (it is what the candidate saw).
+    const quote = [s.message, s.suggestion].filter(Boolean).map((x) => `“${String(x)}”`).join(" ");
+    const outcome = s.isError ? `HATA${quote ? ` — ATK'nin kendi mesajı: ${quote}` : ""}` : "başarılı";
     this.store.append(ctx.runId, {
       testId: ctx.testId,
       kind: "TOOL_RESPONSE",
       actor: "ATK",
-      summary: `${name} -> ${summarizeToolResult(result).isError ? "error" : "ok"}`,
-      payload: { tool: name, requestEventId: req.id, ...summarizeToolResult(result) },
+      summary: `ATK yanıtı — ${toolTr(name)}: ${outcome}`,
+      payload: { tool: name, requestEventId: req.id, ...s },
     });
     return result;
   }
