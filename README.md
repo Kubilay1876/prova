@@ -1,6 +1,8 @@
 # PROVA — Yetki vermeden önce sınayın
 
-Bir trading agent'ına işlem yetkisi vermeden önce onu kontrollü, sanal bir borsada sınayan ve sürüme bağlı, zincirde doğrulanabilir bir karne üreten araç. OKX TR × Team1 Agentic Hackathon (Ankara, 17 Ekim 2026) prototipidir.
+Bir trading agent'ına işlem yetkisi vermeden önce onu kontrollü, sanal bir borsada sınayan ve sürüme bağlı, zincirde doğrulanabilir bir karne üreten araç.
+
+> 🏆 **Finalist.** PROVA, **OKX TR** ile **Avalanche Team1 Türkiye** işbirliğiyle düzenlenen **Agentic Hackathon**'da (Ankara, 17 Ekim 2026) geliştirildi. 30 proje arasından **ilk 10 finaliste** seçildi ve jüriye sunuldu.
 
 ## Nasıl çalışır
 
@@ -74,3 +76,10 @@ Anahtar yoksa yalnız betik adaylar görünür (model harcaması yok).
 - `contracts/` — `ProvaReportRegistry.sol` ve derleme çıktısı (A)
 - `web/` — arayüz (B)
 - `docs/` — API sözleşmesi, durum notları, hizmet tanımı, Fuji manifesti
+
+## Yapanlar
+
+| | GitHub |
+|---|---|
+| <img src="https://github.com/Kubilay1876.png" width="48" alt="Kubilay1876"> | [**@Kubilay1876**](https://github.com/Kubilay1876) |
+| <img src="https://github.com/peponnn.png" width="48" alt="peponnn"> | [**@peponnn**](https://github.com/peponnn) |
